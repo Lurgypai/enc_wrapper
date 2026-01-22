@@ -11,7 +11,7 @@ option(ENC_WRAPPER_ENABLE_NETTLE "Enable nettle library support." ON)
 
 set(ENC_WRAPPER_SRC "enc_wrapper.c")
 set(ENC_WRAPPER_LIBS)
-set(ENC_WRAPPER_HEADERS "enc_wrapper.h")
+set(ENC_WRAPPER_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/enc_wrapper.h")
 
 # ENABLE GCRYPT
 if(ENC_WRAPPER_ENABLE_GCRYPT)
@@ -20,7 +20,7 @@ if(ENC_WRAPPER_ENABLE_GCRYPT)
 
     list(APPEND ENC_WRAPPER_SRC "gcrypt_impl/enc_gcrypt.c")
     list(APPEND ENC_WRAPPER_LIBS GCrypt::GCrypt GPGError::GPGError)
-    list(APPEND ENC_WRAPPER_HEADERS "gcrypt_impl/enc_gcrypt.h")
+    list(APPEND ENC_WRAPPER_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/gcrypt_impl/enc_gcrypt.h")
     message(STATUS "gcrypt enabled")
 else()
     message(STATUS "gcrypt disabled")
@@ -32,7 +32,7 @@ if(ENC_WRAPPER_ENABLE_NETTLE)
 
     list(APPEND ENC_WRAPPER_SRC "nettle_impl/enc_nettle.c")
     list(APPEND ENC_WRAPPER_LIBS Nettle::Nettle)
-    list(APPEND ENC_WRAPPER_HEADERS "nettle_impl/enc_nettle.h")
+    list(APPEND ENC_WRAPPER_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/nettle_impl/enc_nettle.h")
     message(STATUS "nettle enabled")
 else()
     message(STATUS "nettle disabled")
@@ -45,22 +45,19 @@ if(ENC_WRAPPER_LIBS)
 endif()
 
 # GENERATE PUBLIC HEADERS
-set(ENC_WRAPPER_PUBLIC_INCLUDES "${CMAKE_SOURCE_DIR}/include")
+set(ENC_WRAPPER_PUBLIC_INCLUDES "${CMAKE_CURRENT_BINARY_DIR}/include")
+# remove old include
 file(REMOVE_RECURSE ${ENC_WRAPPER_PUBLIC_INCLUDES})
-add_custom_target(make_include_dir ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${ENC_WRAPPER_PUBLIC_INCLUDES})
-add_custom_target(copy_to_include_dir ALL
-    COMMAND ${CMAKE_COMMAND} -E copy
-    ${ENC_WRAPPER_PUBLIC_INCLUDES}
-    ${ENC_WRAPPER_INCLUDE_INSTALL_DESTINATION}
+# generate new include directory
+add_custom_target(make_public_include_dir ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${ENC_WRAPPER_PUBLIC_INCLUDES}
+    COMMAND ${CMAKE_COMMAND} -E copy ${ENC_WRAPPER_HEADERS} ${ENC_WRAPPER_PUBLIC_INCLUDES}
+    COMMENT "Generate public include directory"
 )
-
-set(ENC_WRAPPER_INCLUDE_INSTALL_DESTINATION include/enc_wrapper)
 
 # need to provide location in installation dir and build dir separately here
 target_include_directories(enc_wrapper PUBLIC
-    $<BUILD_INTERFACE:include>
-    $<INSTALL_INTERFACE:${ENC_WRAPPER_INCLUDE_INSTALL_DESTINATION}>)
+    $<INSTALL_INTERFACE:include>)
 
 install(TARGETS enc_wrapper EXPORT enc_wrapper
     ARCHIVE DESTINATION lib # static and import libs installed to lib
@@ -68,12 +65,12 @@ install(TARGETS enc_wrapper EXPORT enc_wrapper
     RUNTIME DESTINATION bin # .dlls installed to bin
     )
 
-install(DIRECTORY include DESTINATION ${MYLB_INCLUDE_INSTALL_DESTINATION}
-    FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
-    DIRECTORY_PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-
+install(DIRECTORY "${ENC_WRAPPER_PUBLIC_INCLUDES}/" DESTINATION include
+    FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ OWNER_WRITE GROUP_WRITE WORLD_WRITE
+    DIRECTORY_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ OWNER_WRITE GROUP_WRITE WORLD_WRITE OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE
+)
 
 # create cmake config to lib/cmake/enc_wrapperConfig.cmake
 install(EXPORT enc_wrapper
-    DESTINATION lib/cmake
+    DESTINATION cmake
     FILE enc_wrapperConfig.cmake)
