@@ -59,7 +59,7 @@ add_custom_target(make_public_include_dir ALL
 target_include_directories(enc_wrapper PUBLIC
     $<INSTALL_INTERFACE:include>)
 
-install(TARGETS enc_wrapper EXPORT enc_wrapper
+install(TARGETS enc_wrapper EXPORT enc_wrapperTargets
     ARCHIVE DESTINATION lib # static and import libs installed to lib
     LIBRARY DESTINATION lib # .so installed to lib
     RUNTIME DESTINATION bin # .dlls installed to bin
@@ -70,7 +70,24 @@ install(DIRECTORY "${ENC_WRAPPER_PUBLIC_INCLUDES}/" DESTINATION include
     DIRECTORY_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ OWNER_WRITE GROUP_WRITE WORLD_WRITE OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE
 )
 
-# create cmake config to lib/cmake/enc_wrapperConfig.cmake
-install(EXPORT enc_wrapper
+include(CMakePackageConfigHelpers)
+
+# generate config
+configure_package_config_file(
+    cmake/enc_wrapperConfig.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/enc_wrapperConfig.cmake"
+    INSTALL_DESTINATION cmake
+)
+
+# install config
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/enc_wrapperConfig.cmake"
     DESTINATION cmake
-    FILE enc_wrapperConfig.cmake)
+)
+
+# install remaining (binary)
+install(
+    EXPORT enc_wrapperTargets
+    NAMESPACE enc_wrapper::
+    DESTINATION cmake
+)
