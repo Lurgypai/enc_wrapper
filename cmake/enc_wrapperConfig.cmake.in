@@ -9,6 +9,7 @@ set(ENABLE_NETTLE @ENC_WRAPPER_ENABLE_NETTLE@)
 
 if(ENABLE_GCRYPT)
     find_dependency(GCrypt)
+    find_dependency(GPGError)
 endif()
 
 if(ENABLE_NETTLE)
