@@ -11,7 +11,7 @@ option(ENC_WRAPPER_ENABLE_NETTLE "Enable nettle library support." ON)
 
 set(ENC_WRAPPER_SRC "enc_wrapper.c")
 set(ENC_WRAPPER_LIBS)
-set(ENC_WRAPPER_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/enc_wrapper.h")
+set(ENC_WRAPPER_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/enc_wrapper.h" "${CMAKE_CURRENT_SOURCE_DIR}/enc_algorithm.h" "${CMAKE_CURRENT_SOURCE_DIR}/enc_library.h")
 
 # ENABLE GCRYPT
 if(ENC_WRAPPER_ENABLE_GCRYPT)
