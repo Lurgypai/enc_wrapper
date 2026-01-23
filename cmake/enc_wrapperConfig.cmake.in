@@ -1,16 +1,18 @@
 @PACKAGE_INIT@
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
+
 include(CMakeFindDependencyMacro)
 
 set(ENABLE_GCRYPT @ENC_WRAPPER_ENABLE_GCRYPT@)
 set(ENABLE_NETTLE @ENC_WRAPPER_ENABLE_NETTLE@)
 
 if(ENABLE_GCRYPT)
-    find_dependency(GCrypt::Gcrypt)
+    find_dependency(GCrypt)
 endif()
 
 if(ENABLE_NETTLE)
-    find_dependency(Nettle::Nettle)
+    find_dependency(Nettle)
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/enc_wrapperTargets.cmake")
