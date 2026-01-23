@@ -11,6 +11,8 @@ option(ENC_WRAPPER_ENABLE_NETTLE "Enable nettle library support." ON)
 
 set(ENC_WRAPPER_SRC "enc_wrapper.c")
 set(ENC_WRAPPER_LIBS)
+set(ENC_WRAPPER_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
+# these are the headers that are exported
 set(ENC_WRAPPER_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/enc_wrapper.h" "${CMAKE_CURRENT_SOURCE_DIR}/enc_algorithm.h" "${CMAKE_CURRENT_SOURCE_DIR}/enc_library.h")
 
 # ENABLE GCRYPT
@@ -20,6 +22,7 @@ if(ENC_WRAPPER_ENABLE_GCRYPT)
 
     list(APPEND ENC_WRAPPER_SRC "gcrypt_impl/enc_gcrypt.c")
     list(APPEND ENC_WRAPPER_LIBS GCrypt::GCrypt GPGError::GPGError)
+    list(APPEND ENC_WRAPPER_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/gcrypt_impl/")
     list(APPEND ENC_WRAPPER_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/gcrypt_impl/enc_gcrypt.h")
     message(STATUS "gcrypt enabled")
 else()
@@ -32,6 +35,7 @@ if(ENC_WRAPPER_ENABLE_NETTLE)
 
     list(APPEND ENC_WRAPPER_SRC "nettle_impl/enc_nettle.c")
     list(APPEND ENC_WRAPPER_LIBS Nettle::Nettle)
+    list(APPEND ENC_WRAPPER_INCLUDE_DIRS "nettle_impl")
     list(APPEND ENC_WRAPPER_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/nettle_impl/enc_nettle.h")
     message(STATUS "nettle enabled")
 else()
@@ -56,6 +60,13 @@ add_custom_target(make_public_include_dir ALL
 )
 
 # need to provide location in installation dir and build dir separately here
+foreach(include_dir ${ENC_WRAPPER_INCLUDE_DIRS})
+    message(STATUS ${include_dir})
+    target_include_directories(enc_wrapper PUBLIC
+        $<BUILD_INTERFACE:${include_dir}>
+    )
+endforeach()
+
 target_include_directories(enc_wrapper PUBLIC
     $<INSTALL_INTERFACE:include>)
 
