@@ -1,11 +1,20 @@
-#include "enc_library.h"
+#include "enc_wrapper.h"
+#include "enc_gcrypt.h"
+#include "enc_nettle.h"
 
 #include <stdlib.h>
 
 static enc_library_impl Enc_Library_Impl;
 
-int enc_load_library(enc_library_impl impl) {
-    Enc_Library_Impl = impl;
+int enc_load_library(enc_library enc_lib) {
+    switch(enc_lib) {
+        case enc_lib_gcrypt:
+            Enc_Library_Impl = enc_get_gcrypt();
+            break;
+        case enc_lib_nettle:
+            Enc_Library_Impl = enc_get_nettle();
+            break;
+    }
     return 0;
 }
 
@@ -21,6 +30,7 @@ int enc_set_key(char* key, size_t key_len) {
 
 int enc_set_nonce(char* nonce, size_t nonce_len) {
     (*Enc_Library_Impl.set_nonce)(nonce, nonce_len);
+    return 0;
 }
 
 int enc_encrypt(void* source, size_t source_size, void* dest, size_t dest_size) {

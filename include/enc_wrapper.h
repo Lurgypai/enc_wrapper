@@ -2,7 +2,12 @@
 #include "enc_algorithm.h"
 #include "enc_library.h"
 
-int enc_load_library(enc_library_impl impl);
+typedef enum enc_library_ {
+    enc_lib_gcrypt,
+    enc_lib_nettle
+} enc_library;
+
+int enc_load_library(enc_library lib);
 int enc_prepare(enc_algorithm alg);
 int enc_set_key(char* key, size_t key_len);
 int enc_set_nonce(char* nonce, size_t key_len);
