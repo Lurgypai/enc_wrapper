@@ -23,6 +23,12 @@ int enc_prepare(enc_algorithm alg) {
     return 0;
 }
 
+int enc_load_config(enc_config cfg) {
+    enc_load_library(cfg.lib);
+    enc_prepare(cfg.alg);
+    return 0;
+}
+
 int enc_set_key(char* key, size_t key_len) {
     (*Enc_Library_Impl.set_key)(key, key_len);
     return 0;

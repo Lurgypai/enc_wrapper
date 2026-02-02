@@ -1,14 +1,12 @@
 #pragma once
-#include "enc_algorithm.h"
-#include "enc_library.h"
 
-typedef enum enc_library_ {
-    enc_lib_gcrypt,
-    enc_lib_nettle
-} enc_library;
+#include <string.h>
+
+#include "enc_config.h"
 
 int enc_load_library(enc_library lib);
 int enc_prepare(enc_algorithm alg);
+int enc_load_config(enc_config cfg);
 int enc_set_key(char* key, size_t key_len);
 int enc_set_nonce(char* nonce, size_t key_len);
 int enc_encrypt(void* source, size_t source_size, void* dest, size_t dest_size); 

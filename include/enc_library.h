@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stddef.h>
-#include "enc_algorithm.h"
+#include "enc_config.h"
 
 typedef struct enc_library_impl {
     int (*prepare)(enc_algorithm alg, size_t* key_len, size_t* nonce_len);

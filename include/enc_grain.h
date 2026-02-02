@@ -1,21 +1,33 @@
 #pragma once
+
 #include <stdint.h>
-#include "enc_wrapper.h"
+
+#include "enc_config.h"
 
 // metadata for a grain
-typedef struct enc_grain_ {
-    // storage stats
+typedef struct enc_grain_meta_ {
     int64_t size;
-    // encryption config stats
-    enc_library lib;
-    enc_algorithm alg;
-} enc_grain;
+    enc_config cfg;
+} enc_grain_meta;
 
 typedef struct enc_grain_layout_ {
-    void* meta_dest;
-    void* data_src;
-    void* data_dest;
+    // where the metadata goes on disk
+    void* meta_store;
+    // where the data is in memory (application)
+    void* data_mem;
+    // where the data goes on disk (filesystem)
+    void* data_store;
 } enc_grain_layout;
 
-void enc_grain_read(enc_grain grain, enc_grain_layout layout);
-void enc_grain_write(enc_grain grain, enc_grain_layout layout);
+// encryption configuration for metadata must be set before IO
+// we read meta and data separately because users will need to know the size to allocate buffers
+enc_grain_meta enc_grain_meta_read(void* meta_store, char* key);
+void enc_grain_data_read(enc_grain_meta meta, void* data_store, void* data_mem, char* key);
+
+void enc_grain_write(enc_grain_meta meta, enc_grain_layout layout, char* key);
+
+// in the current implementation, meta and data are written and read (and thus encrypted and unencrypted) separately. this means additional overhead for each. might be useful to add functions that read/write them together (alternate layout that supports contiguous)
+// WRONG: meta and data will use different encryption configs (meta uses config for reading all meta, while data uses config defined in metadata)
+
+// next
+// separate meta read and write
