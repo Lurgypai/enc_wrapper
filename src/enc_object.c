@@ -7,6 +7,7 @@
 enc_object enc_object_make(const char* tag) {
     enc_object obj;
     obj.tag = strdup(tag);
+    obj.tag_size = strlen(tag);
     obj.grain_cnt = 0;
     obj.grain_reserve = 0;
     obj.grains = NULL;
@@ -55,37 +56,19 @@ void enc_object_grains_write(enc_object obj, enc_config meta_config, char* key) 
     }
 }
 
-// how do we encrypt a variable sized blob?
-// collect it all and then encrypt
-// how do we collect across objects? function to pull metadata
-// function to group write object meta
-//  does this make sense? changes depending on layout
-// function to 
-typedef struct enc_object_meta_ {
-} enc_object_meta;
-
-void enc_object_meta_read(enc_object* obj, enc_config meta_config, void* meta_store, char* key) {
-    enc_load_config(meta_config);
-    enc_set_key(key, enc_get_key_size());
-
-    size_t nonce_size = enc_get_nonce_size();
-    char* nonce = malloc(nonce_size);
-    memcpy(nonce, meta_store, nonce_size);
-    enc_set_nonce(nonce, nonce_size);
-
-
-
-    free(nonce);
+size_t enc_object_get_meta_size(enc_object obj) {
+    return sizeof(obj.grain_cnt) + sizeof(obj.tag_size) + obj.tag_size;
 }
 
-void enc_object_meta_write(enc_object obj, enc_config meta_config, void* meta_store, char* key) {
-    enc_load_config(meta_config);
-    enc_set_key(key, enc_get_key_size());
+void enc_object_get_meta(enc_object obj, void* meta_store) {
+    memcpy(meta_store, &obj.grain_cnt, sizeof(obj.grain_cnt));
+    memcpy(meta_store + sizeof(obj.grain_cnt), &obj.tag_size, sizeof(obj.tag_size));
+    memcpy(meta_store + sizeof(obj.grain_cnt) + sizeof(obj.tag_size), obj.tag, obj.tag_size);
 
-    size_t nonce_size = enc_get_nonce_size();
-    char* nonce = enc_make_nonce();
+}
 
-
-
-    free(nonce);
+void enc_object_parse_meta(enc_object* obj, void* meta_store) {
+    memcpy(&obj->grain_cnt, meta_store, sizeof(obj->grain_cnt));
+    memcpy(&obj->tag_size, meta_store + sizeof(obj->grain_cnt), sizeof(obj->tag_size));
+    memcpy(obj->tag, meta_store + sizeof(obj->grain_cnt) + sizeof(obj->tag_size), obj->tag_size);
 }
