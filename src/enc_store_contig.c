@@ -8,6 +8,19 @@
 
 #include <enc_wrapper.h>
 
+
+enc_store_contig enc_store_contig_create(char* filename) {
+    enc_store_contig store;
+    store.obj_cnt = 0;
+    store.obj_reserved = 0;
+    store.objs = NULL;
+    store.obj_offsets = NULL;
+
+    store.file = open(filename, O_CREAT | O_RDWR);
+
+    return store;
+}
+
 enc_store_contig enc_store_contig_open(char* filename) {
     enc_store_contig store;
     store.obj_cnt = 0;
@@ -15,12 +28,31 @@ enc_store_contig enc_store_contig_open(char* filename) {
     store.objs = NULL;
     store.obj_offsets = NULL;
 
-    store.file = open(filename, O_CREAT | O_APPEND| O_RDWR);
+    store.file = open(filename, O_RDWR);
+
+    // parse object count
+    size_t offset = sizeof(store.obj_cnt);
+    lseek(store.file, -offset, SEEK_END);
+    read(store.file, &store.obj_cnt, sizeof(store.obj_cnt));
+
+    store.obj_reserved = store.obj_cnt;
+    store.objs = malloc(store.obj_cnt * sizeof(enc_object));
+    store.obj_offsets = malloc(store.obj_cnt * sizeof(size_t));
+
+    offset += store.obj_cnt * sizeof(enc_object);
+    lseek(store.file, -offset, SEEK_END);
+    read(store.file, store.objs, store.obj_cnt * sizeof(enc_object));
+
+    offset += store.obj_cnt * sizeof(size_t);
+    lseek(store.file, -offset, SEEK_END);
+    read(store.file, store.obj_offsets, store.obj_cnt * sizeof(size_t));
 
     return store;
 }
 
 void enc_store_contig_close(enc_store_contig store) {
+    free(store.objs);
+    free(store.obj_offsets);
     close(store.file);
 }
 
@@ -34,7 +66,7 @@ void enc_store_contig_close(enc_store_contig store) {
 //
 // to read data, we use the previously read metadata to pull data out
 
-enc_grain_meta enc_store_contig_get_grain(enc_store_contig store, char* tag, enc_config config, char* key) {
+enc_grain_meta enc_store_contig_get_meta(enc_store_contig store, char* tag, enc_config config, char* key) {
     // find the object
     enc_object* obj = NULL;
     int i;
@@ -49,12 +81,9 @@ enc_grain_meta enc_store_contig_get_grain(enc_store_contig store, char* tag, enc
         exit(1);
     }
 
-    enc_load_config(config);
+    enc_object_grains_meta_read(*obj, config, key);
 
-    // get meta + nonce as ptr
-    void* meta_store = mmap(NULL, sizeof(enc_grain_meta) + enc_get_nonce_size(), PROT_READ, 0644, store.file, store.obj_offsets[i]);
-
-    return enc_grain_meta_read(meta_store, key);
+    return obj->grains[0].grain;
 }
 
 

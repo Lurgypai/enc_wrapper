@@ -12,6 +12,14 @@
  *  write the grains
  *  write the object meta
  *  write the stored location of the grains
+ *
+ * to read
+ *  retrieve location of grains
+ *  read object metadata
+ *  set grain layouts to complete metadata
+ *      this completes the metadata setup
+ *  read grain meta using object grain meta read
+ *  read grain data using objec grain data read
  */
 
 typedef struct enc_grain_io_ {
@@ -35,9 +43,11 @@ void enc_object_free(enc_object obj);
 size_t enc_object_add_grain(enc_object* obj, enc_grain_meta grain);
 void enc_object_set_grain_layout(enc_object* obj, size_t pos, enc_grain_layout layout);
 
-// these automatically write the grain and the config to their respective locations as defined by their layouts
-// this means the meta and raw data are encrypted separately, ie, no collective meta optimization
-void enc_object_grains_read(enc_object obj, enc_config meta_conf, char* key);
+// separate read so we can just read meta
+void enc_object_grains_meta_read(enc_object obj, enc_config meta_conf, char* key);
+void enc_object_grains_data_read(enc_object obj, char* key);
+
+//write happens all at once (for now)
 void enc_object_grains_write(enc_object obj, enc_config meta_conf, char* key);
 
 size_t enc_object_get_meta_size(enc_object obj);

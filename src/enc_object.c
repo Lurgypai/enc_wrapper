@@ -41,10 +41,15 @@ void enc_object_set_grain_layout(enc_object* obj, size_t pos, enc_grain_layout l
     obj->grains[pos].layout = layout;
 }
 
-void enc_object_grains_read(enc_object obj, enc_config meta_config, char* key) {
+void enc_object_grains_meta_read(enc_object obj, enc_config meta_conf, char* key) {
+    enc_load_config(meta_conf);
     for(int grain_pos = 0; grain_pos != obj.grain_cnt; ++grain_pos) {
-        enc_load_config(meta_config);
         obj.grains[grain_pos].grain = enc_grain_meta_read(obj.grains[grain_pos].layout.meta_store, key);
+    }
+}
+
+void enc_object_grains_data_read(enc_object obj, char* key) {
+    for(int grain_pos = 0; grain_pos != obj.grain_cnt; ++grain_pos) {
         enc_grain_data_read(obj.grains[grain_pos].grain, obj.grains[grain_pos].layout.data_store, obj.grains[grain_pos].layout.data_mem, key);
     }
 }
