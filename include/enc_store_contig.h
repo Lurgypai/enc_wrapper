@@ -11,7 +11,6 @@
 // read object
 // write object
 
-
 typedef struct enc_store_contig_ {
     int file;
     size_t obj_cnt;
@@ -32,10 +31,10 @@ enc_store_contig enc_store_contig_open(char* filename);
 void enc_store_contig_close(enc_store_contig store);
 
 // add object to file
-void enc_store_contig_add_object(char* tag);
+void enc_store_contig_add_object(enc_store_contig* store, char* tag);
 
 // get object (grain) meta from file
-enc_grain_meta enc_store_contig_get_grain(char* tag);
+enc_grain_meta enc_store_contig_get_grain(enc_store_contig store, char* tag, enc_config config, char* key);
 // set object (grain) meta
 void enc_store_contig_set_grain(char* tag, enc_grain_meta);
 

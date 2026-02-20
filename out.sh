@@ -2,7 +2,7 @@
 
 #!/bin/bash
 
-DEP_DIR=$(realpath dependencies)
+DEP_DIR=$(realpath ../dependencies)
 OUT_DIR=$(realpath ../enc_wrapper-ins)
 
 rm -rf ${OUT_DIR}

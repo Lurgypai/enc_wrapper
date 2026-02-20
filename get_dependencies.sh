@@ -1,9 +1,11 @@
 #!/bin/bash
 
-rm -rf dependencies
-mkdir dependencies
+DEP_DIR=$(realpath ../dependencies)
 
-pushd dependencies > /dev/null
+rm -rf ${DEP_DIR}
+mkdir ${DEP_DIR}
+
+pushd ${DEP_DIR} > /dev/null
 
 INSTALL_DIR=$(pwd)
 
