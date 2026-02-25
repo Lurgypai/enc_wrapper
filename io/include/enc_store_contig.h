@@ -37,10 +37,10 @@ void enc_store_contig_add_object(enc_store_contig* store, char* tag);
 // get object and grain meta from file, return the grain information
 enc_grain_meta enc_store_contig_get_meta(enc_store_contig store, char* tag, enc_config config, char* key);
 // set object meta
-void enc_store_contig_set_meta(char* tag, enc_grain_meta);
+void enc_store_contig_set_meta(enc_store_contig store, char* tag, enc_grain_meta meta);
 
 // read object
-void enc_store_contig_read_object(char* tag, void* data_store);
+void enc_store_contig_read_object(enc_store_contig store, char* tag, void* data_store);
 // write obejct
 void enc_store_contig_write_object(char* tag, void* data);
 

@@ -1,0 +1,42 @@
+set(_ENC_WRAPPER_ROOT_HINTS
+    $ENV{ENC_WRAPPER_ROOT_DIR}
+)
+
+FIND_PATH(ENC_WRAPPER_INCLUDE_DIR
+    NAMES
+        enc_wrapper.h
+    HINTS
+        ${_ENC_WRAPPER_ROOT_HINTS}
+    PATH_SUFFIXES
+        include
+)
+
+
+FIND_LIBRARY(ENC_WRAPPER_LIBRARY
+    NAMES
+        enc_wrapper
+        libenc_wrapper
+    HINTS
+        ${_ENC_WRAPPER_ROOT_HINTS}
+    PATH_SUFFIXES
+        lib
+        lib64
+)
+
+# handle the QUIETLY and REQUIRED arguments and set ENC_WRAPPER_FOUND to TRUE if 
+# all listed variables are TRUE
+INCLUDE(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(enc_wrapper DEFAULT_MSG ENC_WRAPPER_LIBRARY ENC_WRAPPER_INCLUDE_DIR)
+
+IF(ENC_WRAPPER_FOUND)
+  SET(ENC_WRAPPER_LIBRARIES ${ENC_WRAPPER_LIBRARY})
+ENDIF(ENC_WRAPPER_FOUND)
+
+if (ENC_WRAPPER_LIBRARIES AND ENC_WRAPPER_INCLUDE_DIR)
+    add_library(enc_wrapper::enc_wrapper UNKNOWN IMPORTED)
+    set_target_properties(enc_wrapper::enc_wrapper PROPERTIES
+        IMPORTED_LOCATION "${ENC_WRAPPER_LIBRARIES}"
+        INTERFACE_INCLUDE_DIRECTORIES "${ENC_WRAPPER_INCLUDE_DIR}"
+    )
+endif()
+
