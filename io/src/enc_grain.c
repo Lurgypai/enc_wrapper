@@ -43,16 +43,16 @@ void enc_grain_data_read(enc_grain_meta meta, void* data_store, void* data_mem, 
     free(nonce);
 }
 
-void enc_grain_write(enc_grain_meta meta, enc_grain_layout layout, char* key) {
+void enc_grain_write(enc_grain_meta meta, void* meta_store, void* data_mem, void* data_store, char* key) {
     // write meta with externally set config
     enc_set_key(key, enc_get_key_size());
     // generate and store nonce
     char* nonce = enc_make_nonce();
     size_t nonce_size = enc_get_nonce_size();
-    memcpy(layout.meta_store, nonce, nonce_size);
+    memcpy(meta_store, nonce, nonce_size);
     // set nonce and encrypt
     enc_set_nonce(nonce, nonce_size);
-    enc_encrypt(&meta, sizeof(meta), layout.meta_store + nonce_size, sizeof(meta));
+    enc_encrypt(&meta, sizeof(meta), meta_store + nonce_size, sizeof(meta));
 
     free(nonce);
     
@@ -61,9 +61,9 @@ void enc_grain_write(enc_grain_meta meta, enc_grain_layout layout, char* key) {
     enc_set_key(key, enc_get_key_size());
     nonce = enc_make_nonce();
     nonce_size = enc_get_nonce_size();
-    memcpy(layout.data_store, nonce, nonce_size);
+    memcpy(data_store, nonce, nonce_size);
     enc_set_nonce(nonce, nonce_size);
-    enc_encrypt(layout.data_mem, meta.size, layout.data_store + nonce_size, meta.size);
+    enc_encrypt(data_mem, meta.size, data_store + nonce_size, meta.size);
 
     free(nonce);
 }

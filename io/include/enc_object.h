@@ -22,11 +22,6 @@
  *  read grain data using objec grain data read
  */
 
-typedef struct enc_grain_io_ {
-    enc_grain_meta grain;
-    enc_grain_layout layout;
-} enc_grain_io;
-
 typedef struct enc_object_ {
     char* tag;
     size_t tag_size;
@@ -34,7 +29,7 @@ typedef struct enc_object_ {
     size_t grain_cnt;
     // backing size
     size_t grain_reserve;
-    enc_grain_io* grains;
+    enc_grain_meta* grains;
 } enc_object;
 
 enc_object enc_object_make(const char* tag);

@@ -117,7 +117,7 @@ void enc_store_contig_set_meta(enc_store_contig store, char* tag, enc_grain_meta
     enc_object_add_grain(obj, meta);
 }
 
-void enc_store_contig_read_object(enc_store_contig store, char * tag, void* data_store) {
+void enc_store_contig_read_object(enc_store_contig store, char * tag, void* data) {
     // do we know where the object is?
     //      yes, we should have the file and the offset
     enc_object* obj = NULL;
@@ -141,6 +141,11 @@ void enc_store_contig_read_object(enc_store_contig store, char * tag, void* data
         // mmap entire grain
         // read grain
         // -------> NEED TO ADD FUNCTION TO READ INDIVIDUAL GRAIN
+
+        enc_grain_layout layout;
+        layout.data_mem = data;
+        // grain is a contiguous meta + data blob
+        layout.meta_store = mmap(NULL, sizeof(enc_grain_meta), PROT_READ, MAP_SHARED, store.file, offset);
     }
 }
 

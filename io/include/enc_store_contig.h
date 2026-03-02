@@ -40,7 +40,7 @@ enc_grain_meta enc_store_contig_get_meta(enc_store_contig store, char* tag, enc_
 void enc_store_contig_set_meta(enc_store_contig store, char* tag, enc_grain_meta meta);
 
 // read object
-void enc_store_contig_read_object(enc_store_contig store, char* tag, void* data_store);
+void enc_store_contig_read_object(enc_store_contig store, char* tag, void* data);
 // write obejct
 void enc_store_contig_write_object(char* tag, void* data);
 
