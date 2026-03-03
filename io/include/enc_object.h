@@ -36,18 +36,19 @@ enc_object enc_object_make(const char* tag);
 void enc_object_free(enc_object obj);
 
 size_t enc_object_add_grain(enc_object* obj, enc_grain_meta grain);
-void enc_object_set_grain_layout(enc_object* obj, size_t pos, enc_grain_layout layout);
 
-// separate read so we can just read meta
-void enc_object_grains_meta_read(enc_object obj, enc_config meta_conf, char* key);
-void enc_object_grains_data_read(enc_object obj, char* key);
+// read grain metadata into grain index
+void enc_object_grain_meta_read(enc_object obj, size_t grain_idx, enc_config meta_conf, char* key, void* meta_store);
 
-//write happens all at once (for now)
-void enc_object_grains_write(enc_object obj, enc_config meta_conf, char* key);
+// read grain data into data_mem
+void enc_object_grain_data_read(enc_object obj, size_t grain_idx, char* key, void* data_mem, void* data_store);
+
+void enc_object_grain_write(enc_object obj, size_t grain_idx, enc_config meta_conf, char* key, void* meta_store, void* data_mem, void* data_store);
 
 size_t enc_object_get_meta_size(enc_object obj);
 // puts the object metadata as a contiguous buffer into meta_store, for encryption and writing
 // space allocation is the job of whoever is passing the data
 void enc_object_put_meta(enc_object obj, void* meta_store);
+
 // parses meta from blob
 void enc_object_parse_meta(enc_object* obj, void* meta_store);

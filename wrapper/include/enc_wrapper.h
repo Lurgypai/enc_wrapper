@@ -14,6 +14,7 @@ int enc_decrypt(void* source, size_t source_size, void* dest, size_t dest_size);
 int enc_reset();
 size_t enc_get_key_size();
 size_t enc_get_nonce_size();
+size_t enc_get_encrypted_size(enc_config cfg, size_t raw_size);
 char* enc_make_key();
 char* enc_make_nonce();
 

@@ -8,7 +8,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(ENC_IO_SRC "./src/enc_grain.c" "./src/enc_object.c" "./src/enc_store_contig.c")
 set(ENC_IO_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-#ADD LIBRARY
 add_library(enc_io STATIC ${ENC_IO_SRC})
 target_sources(enc_io PRIVATE
     FILE_SET HEADERS FILES
@@ -60,3 +59,6 @@ install(
     NAMESPACE enc_wrapper::
     DESTINATION cmake
 )
+
+# tests
+# add_subdirectory(tests)

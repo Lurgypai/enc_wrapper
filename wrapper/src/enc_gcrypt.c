@@ -11,7 +11,7 @@ static void print_gcrypt_err(gcry_error_t err) {
     fprintf(stderr, "ERROR FROM GCRYPT: %s\n", gcry_strerror(err));
 }
 
-static int gcrypt_prepare(enc_algorithm alg, size_t* key_len, size_t* nonce_len) {
+static int gcrypt_prepare(enc_algorithm alg, size_t* key_len, size_t* nonce_len, size_t* blk_len) {
     int cipher;
     int mode;
 
@@ -28,6 +28,7 @@ static int gcrypt_prepare(enc_algorithm alg, size_t* key_len, size_t* nonce_len)
             break;
     }
 
+    *blk_len = gcry_cipher_get_algo_blklen(cipher);
     print_gcrypt_err(gcry_cipher_open(&handle, cipher, mode, 0));
     *key_len = gcry_cipher_get_algo_keylen(cipher);
 
@@ -44,12 +45,20 @@ static int gcrypt_set_nonce(char* nonce, size_t nonce_len) {
     return 0;
 }
 
-static int gcrypt_encrypt(void* source, size_t source_len, void* dest, size_t dest_len) {
+static int gcrypt_encrypt(void* source, size_t source_len, void* dest, size_t dest_len, size_t blk_len) {
+    if(source_len % blk_len != 0 || dest_len % blk_len != 0) {
+        fprintf(stderr, "ERROR: encrypt, source or destination sizes are not divisible by block size\n");
+    }
+
     print_gcrypt_err(gcry_cipher_encrypt(handle, dest, dest_len, source, source_len));
     return 0;
 }
 
-static int gcrypt_decrypt(void* source, size_t source_len, void* dest, size_t dest_len) {
+static int gcrypt_decrypt(void* source, size_t source_len, void* dest, size_t dest_len, size_t blk_len) {
+    if(source_len % blk_len != 0 || dest_len % blk_len != 0) {
+        fprintf(stderr, "ERROR: decrypt, source or destination sizes are not divisible by block size\n");
+    }
+
     gcry_cipher_decrypt(handle, dest, dest_len, source, source_len);
     return 0;
 }
@@ -73,6 +82,25 @@ char* gcrypt_make_nonce(size_t nonce_size) {
     return make_random(nonce_size);
 }
 
+static size_t gcrypt_get_encrypted_size(enc_algorithm alg, size_t raw_size) {
+    // calculate padding
+    int cipher;
+    int nonce_len;
+    switch(alg) {
+        case aes256:
+            cipher = GCRY_CIPHER_AES256;
+            nonce_len = gcry_cipher_get_algo_blklen(cipher);
+            break;
+        case chacha20:
+            cipher = GCRY_CIPHER_CHACHA20;
+            nonce_len = 12;
+            break;
+    }
+    unsigned int block_size = gcry_cipher_get_algo_blklen(cipher);
+    size_t padding = raw_size % block_size;
+    return raw_size + nonce_len + padding;
+}
+
 enc_library_impl enc_get_gcrypt() {
     enc_library_impl ret = {
         .prepare = gcrypt_prepare,
@@ -84,7 +112,8 @@ enc_library_impl enc_get_gcrypt() {
         .make_key = gcrypt_make_key,
         .make_nonce = gcrypt_make_nonce,
         .key_size = 0,
-        .nonce_size = 0
+        .nonce_size = 0,
+        .get_encrypted_size = gcrypt_get_encrypted_size
     };
     return ret;
 }

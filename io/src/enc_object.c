@@ -25,7 +25,7 @@ size_t enc_object_add_grain(enc_object* obj, enc_grain_meta grain) {
 
     // if null assign
     if(obj->grains == NULL) {
-        obj->grains = malloc(sizeof(enc_grain_io));
+        obj->grains = malloc(sizeof(enc_grain_meta));
         obj->grain_reserve = 1;
     }
     else if (obj->grain_cnt > obj->grain_reserve) {
@@ -33,32 +33,22 @@ size_t enc_object_add_grain(enc_object* obj, enc_grain_meta grain) {
         obj->grains = realloc(obj->grains, obj->grain_reserve);
     }
     
-    obj->grains[pos].grain = grain;
+    obj->grains[pos] = grain;
     return pos;
 }
 
-void enc_object_set_grain_layout(enc_object* obj, size_t pos, enc_grain_layout layout) {
-    obj->grains[pos].layout = layout;
-}
-
-void enc_object_grains_meta_read(enc_object obj, enc_config meta_conf, char* key) {
+void enc_object_grain_meta_read(enc_object obj, size_t grain_idx, enc_config meta_conf, char* key, void* meta_store) {
     enc_load_config(meta_conf);
-    for(int grain_pos = 0; grain_pos != obj.grain_cnt; ++grain_pos) {
-        obj.grains[grain_pos].grain = enc_grain_meta_read(obj.grains[grain_pos].layout.meta_store, key);
-    }
+    obj.grains[grain_idx] = enc_grain_meta_read(meta_store, key);
 }
 
-void enc_object_grains_data_read(enc_object obj, char* key) {
-    for(int grain_pos = 0; grain_pos != obj.grain_cnt; ++grain_pos) {
-        enc_grain_data_read(obj.grains[grain_pos].grain, obj.grains[grain_pos].layout.data_store, obj.grains[grain_pos].layout.data_mem, key);
-    }
+void enc_object_grain_data_read(enc_object obj, size_t grain_idx, char* key, void* data_mem, void* data_store) {
+    enc_grain_data_read(obj.grains[grain_idx], data_store, data_mem, key);
 }
 
-void enc_object_grains_write(enc_object obj, enc_config meta_config, char* key) {
-    for(int grain_pos = 0; grain_pos != obj.grain_cnt; ++grain_pos) {
-        enc_load_config(meta_config);
-        enc_grain_write(obj.grains[grain_pos].grain, obj.grains[grain_pos].layout, key);
-    }
+void enc_object_grain_write(enc_object obj, size_t grain_idx, enc_config meta_conf, char* key, void* meta_store, void* data_mem, void* data_store) {
+    enc_load_config(meta_conf);
+    enc_grain_write(obj.grains[grain_idx], meta_store, data_mem, data_store, key);
 }
 
 size_t enc_object_get_meta_size(enc_object obj) {
@@ -75,5 +65,6 @@ void enc_object_get_meta(enc_object obj, void* meta_store) {
 void enc_object_parse_meta(enc_object* obj, void* meta_store) {
     memcpy(&obj->grain_cnt, meta_store, sizeof(obj->grain_cnt));
     memcpy(&obj->tag_size, meta_store + sizeof(obj->grain_cnt), sizeof(obj->tag_size));
+    obj->tag = malloc(obj->tag_size);
     memcpy(obj->tag, meta_store + sizeof(obj->grain_cnt) + sizeof(obj->tag_size), obj->tag_size);
 }
