@@ -9,7 +9,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 option(ENC_WRAPPER_ENABLE_GCRYPT "Enable gcrypt library support." ON)
 option(ENC_WRAPPER_ENABLE_NETTLE "Enable nettle library support." ON)
 
-set(ENC_WRAPPER_SRC "src/enc_wrapper.c")
+set(ENC_WRAPPER_SRC "src/enc_wrapper.c" "src/enc_gcrypt.c" "src/enc_nettle.c")
 set(ENC_WRAPPER_LIBS)
 set(ENC_WRAPPER_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
@@ -18,7 +18,6 @@ if(ENC_WRAPPER_ENABLE_GCRYPT)
     find_package(GCrypt REQUIRED)
     find_package(GPGError REQUIRED)
 
-    list(APPEND ENC_WRAPPER_SRC "src/enc_gcrypt.c")
     list(APPEND ENC_WRAPPER_LIBS GCrypt::GCrypt GPGError::GPGError)
     message(STATUS "gcrypt enabled")
 else()
@@ -29,7 +28,6 @@ endif()
 if(ENC_WRAPPER_ENABLE_NETTLE)
     find_package(Nettle REQUIRED)
 
-    list(APPEND ENC_WRAPPER_SRC "src/enc_nettle.c")
     list(APPEND ENC_WRAPPER_LIBS Nettle::Nettle)
     message(STATUS "nettle enabled")
 else()
@@ -43,7 +41,7 @@ target_include_directories(enc_wrapper PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 if(ENC_WRAPPER_LIBS)
-    target_link_libraries(enc_wrapper PRIVATE ${ENC_WRAPPER_LIBS})
+    target_link_libraries(enc_wrapper PUBLIC ${ENC_WRAPPER_LIBS})
 endif()
 
 

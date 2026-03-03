@@ -22,7 +22,7 @@ target_include_directories(enc_io PUBLIC
 )
 
 find_package(enc_wrapper REQUIRED)
-target_link_libraries(enc_io PRIVATE enc_wrapper::enc_wrapper)
+target_link_libraries(enc_io PUBLIC enc_wrapper::enc_wrapper)
 
 install(TARGETS enc_io EXPORT enc_ioTargets
     ARCHIVE DESTINATION lib # static and import libs installed to lib
@@ -61,4 +61,4 @@ install(
 )
 
 # tests
-# add_subdirectory(tests)
+add_subdirectory(test)
