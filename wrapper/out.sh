@@ -20,6 +20,7 @@ cd out
 cmake .. \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
     -DCMAKE_INSTALL_PREFIX=${OUT_DIR} \
-    -DENC_WRAPPER_ENABLE_NETTLE=Off
+    -DENC_WRAPPER_ENABLE_NETTLE=Off \
+    -DCMAKE_BUILD_TYPE=Debug
 
 mv compile_commands.json ..

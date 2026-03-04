@@ -2,19 +2,20 @@
 #include "enc_gcrypt.h"
 #include "enc_nettle.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
-static int do_init = 1;
+static int is_inited = 0;
 static enc_library_impl Impls[2];
 static enc_library_impl* Enc_Library_Impl;
 
 int enc_load_library(enc_library enc_lib) {
 
     // initialize libraries
-    if(do_init) {
+    if(!is_inited) {
         Impls[enc_lib_gcrypt] = enc_get_gcrypt();
         Impls[enc_lib_nettle] = enc_get_nettle();
-        do_init = 0;
+        is_inited = 1;
     }
 
     Enc_Library_Impl = Impls + enc_lib;
@@ -66,6 +67,11 @@ size_t enc_get_nonce_size() {
 }
 
 size_t enc_get_encrypted_size(enc_config cfg, size_t raw_size) {
+    if(!is_inited) {
+        fprintf(stderr, "ERROR: enc_get_encrypted_size, the encryption wrapper was not initialized (did you call enc_load_library?)\n");
+        return 0;
+    }
+
     return Impls[cfg.lib].get_encrypted_size(cfg.alg, raw_size);
 }
 

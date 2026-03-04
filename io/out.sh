@@ -21,5 +21,6 @@ cmake .. \
     -Denc_wrapper_DIR=${WRAPPER_DIR}/cmake \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
     -DCMAKE_INSTALL_PREFIX=${OUT_DIR} \
+    -DCMAKE_BUILD_TYPE=Debug
 
 mv compile_commands.json ..
