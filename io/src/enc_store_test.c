@@ -1,4 +1,4 @@
-#include "enc_store_contig.h"
+#include "enc_store_test.h"
 
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -15,8 +15,8 @@
 // encrypted size
 // enc config
 
-enc_store_contig enc_store_contig_create(char* filename, enc_config cfg) {
-    enc_store_contig store;
+enc_store_test enc_store_test_create(char* filename, enc_config cfg) {
+    enc_store_test store;
     store.file = open(filename, O_CREAT | O_RDWR);
     store.cfg = cfg;
     store.obj_cnt = 0;
@@ -27,8 +27,8 @@ enc_store_contig enc_store_contig_create(char* filename, enc_config cfg) {
     return store;
 }
 
-enc_store_contig enc_store_contig_open(char* filename, char* key) {
-    enc_store_contig store;
+enc_store_test enc_store_test_open(char* filename, char* key) {
+    enc_store_test store;
     store.file = open(filename, O_RDWR);
     store.obj_cnt = 0;
     store.obj_reserved = 0;
@@ -87,7 +87,7 @@ enc_store_contig enc_store_contig_open(char* filename, char* key) {
     return store;
 }
 
-void enc_store_contig_close(enc_store_contig store, char* key) {
+void enc_store_test_close(enc_store_test store, char* key) {
 
     // ------- write object offsets
     size_t file_end = lseek(store.file, 0, SEEK_END);
@@ -149,7 +149,7 @@ void enc_store_contig_close(enc_store_contig store, char* key) {
     close(store.file);
 }
 
-void enc_store_contig_add_object(enc_store_contig* store, char* tag) {
+void enc_store_test_add_object(enc_store_test* store, char* tag) {
     size_t pos = store->obj_cnt;
     ++store->obj_cnt;
 
@@ -175,7 +175,7 @@ void enc_store_contig_add_object(enc_store_contig* store, char* tag) {
 //
 // to read data, we use the previously read metadata to pull data out
 
-static size_t get_object_idx(enc_store_contig store, char* tag) {
+static size_t get_object_idx(enc_store_test store, char* tag) {
     enc_object* obj = NULL;
     size_t i;
     for(i = 0; i != store.obj_cnt; ++i) {
@@ -192,7 +192,7 @@ static size_t get_object_idx(enc_store_contig store, char* tag) {
     return i;
 }
 
-enc_grain_meta enc_store_contig_get_meta(enc_store_contig store, char* tag, char* key) {
+enc_grain_meta enc_store_test_get_meta(enc_store_test store, char* tag, char* key) {
     size_t obj_idx = get_object_idx(store, tag);
     enc_object* obj = store.objs + obj_idx;
     size_t offset = store.obj_offsets[obj_idx];
@@ -208,7 +208,7 @@ enc_grain_meta enc_store_contig_get_meta(enc_store_contig store, char* tag, char
     return obj->grains[0];
 }
 
-void enc_store_contig_set_meta(enc_store_contig store, char* tag, enc_grain_meta meta) {
+void enc_store_test_set_meta(enc_store_test store, char* tag, enc_grain_meta meta) {
     size_t obj_idx = get_object_idx(store, tag);
     enc_object* obj = store.objs + obj_idx;
     // we already have a representative grain, oh no!
@@ -219,7 +219,7 @@ void enc_store_contig_set_meta(enc_store_contig store, char* tag, enc_grain_meta
     enc_object_add_grain(obj, meta);
 }
 
-void enc_store_contig_read_object(enc_store_contig store, char * tag, char* key, void* data) {
+void enc_store_test_read_object(enc_store_test store, char * tag, char* key, void* data) {
     size_t obj_idx = get_object_idx(store, tag);
     enc_object* obj = store.objs + obj_idx;
     size_t offset = store.obj_offsets[obj_idx];
@@ -238,7 +238,7 @@ void enc_store_contig_read_object(enc_store_contig store, char * tag, char* key,
     }
 }
 
-void enc_store_contig_write_object(enc_store_contig* store, char* tag, char* key, void* data) {
+void enc_store_test_write_object(enc_store_test* store, char* tag, char* key, void* data) {
     size_t obj_idx = get_object_idx(*store, tag);
     enc_object* obj = store->objs + obj_idx;
 

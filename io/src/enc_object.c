@@ -55,7 +55,7 @@ size_t enc_object_get_meta_size(enc_object obj) {
     return sizeof(obj.grain_cnt) + sizeof(obj.tag_size) + obj.tag_size;
 }
 
-void enc_object_get_meta(enc_object obj, void* meta_store) {
+void enc_object_put_meta(enc_object obj, void* meta_store) {
     memcpy(meta_store, &obj.grain_cnt, sizeof(obj.grain_cnt));
     memcpy(meta_store + sizeof(obj.grain_cnt), &obj.tag_size, sizeof(obj.tag_size));
     memcpy(meta_store + sizeof(obj.grain_cnt) + sizeof(obj.tag_size), obj.tag, obj.tag_size);

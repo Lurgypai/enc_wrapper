@@ -5,7 +5,7 @@ project(encryption_io)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-set(ENC_IO_SRC "./src/enc_grain.c" "./src/enc_object.c" "./src/enc_store_contig.c")
+set(ENC_IO_SRC "./src/enc_grain.c" "./src/enc_object.c" "./src/enc_store_test.c")
 set(ENC_IO_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_library(enc_io STATIC ${ENC_IO_SRC})
@@ -13,7 +13,7 @@ target_sources(enc_io PRIVATE
     FILE_SET HEADERS FILES
     "${ENC_IO_INCLUDE}/enc_grain.h"
     "${ENC_IO_INCLUDE}/enc_object.h"
-    "${ENC_IO_INCLUDE}/enc_store_contig.h"
+    "${ENC_IO_INCLUDE}/enc_store_test.h"
 )
 
 target_include_directories(enc_io PUBLIC
