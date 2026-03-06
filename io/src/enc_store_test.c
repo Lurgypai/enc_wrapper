@@ -23,6 +23,7 @@ enc_store_test enc_store_test_create(char* filename, enc_config cfg) {
     store.obj_reserved = 0;
     store.objs = NULL;
     store.obj_offsets = NULL;
+    store.cur_offset = 0;
 
     return store;
 }
@@ -34,6 +35,11 @@ enc_store_test enc_store_test_open(char* filename, char* key) {
     store.obj_reserved = 0;
     store.objs = NULL;
     store.obj_offsets = NULL;
+
+    // WARNING: as this is 0, writing to an opened file will start overwriting from the front.
+    // needs to be fixed for complex io patterns
+    store.cur_offset = 0;
+
     size_t cur_offset = 0;
 
     // parse the encryption config for the metadata
@@ -155,11 +161,13 @@ void enc_store_test_add_object(enc_store_test* store, char* tag) {
 
     if(store->objs == NULL) {
         store->objs = malloc(sizeof(enc_object));
+        store->obj_offsets = malloc(sizeof(size_t));
         store->obj_reserved = 1;
     }
     else if (store->obj_cnt > store->obj_reserved) {
         store->obj_reserved *= 2;
-        store->objs = realloc(store->objs, store->obj_reserved);
+        store->objs = realloc(store->objs, store->obj_reserved * sizeof(enc_object));
+        store->obj_offsets = realloc(store->obj_offsets, store->obj_reserved * sizeof(size_t));
     }
 
     store->objs[pos] = enc_object_make(tag);
@@ -257,6 +265,8 @@ void enc_store_test_write_object(enc_store_test* store, char* tag, char* key, vo
 
         // map
         void* full_store = mmap(NULL, total_size, PROT_READ, MAP_SHARED, store->file, offset);
+        if(full_store == MAP_FAILED) perror("MMAP FAILED in enc_store_test_write_object");
+
         void* meta_store = full_store;
         void* data_store = full_store + meta_size;
 

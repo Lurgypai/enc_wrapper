@@ -30,7 +30,7 @@ size_t enc_object_add_grain(enc_object* obj, enc_grain_meta grain) {
     }
     else if (obj->grain_cnt > obj->grain_reserve) {
         obj->grain_reserve *= 2;
-        obj->grains = realloc(obj->grains, obj->grain_reserve);
+        obj->grains = realloc(obj->grains, obj->grain_reserve * sizeof(enc_grain_meta));
     }
     
     obj->grains[pos] = grain;
