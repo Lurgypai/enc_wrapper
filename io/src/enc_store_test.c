@@ -15,9 +15,32 @@
 // encrypted size
 // enc config
 
+static void* mmap_unaligned(int fd, size_t size, size_t offset) {
+    long page_size = sysconf(_SC_PAGESIZE);
+
+    // get page aligned offset
+    size_t page_offset = (offset / page_size) * page_size;
+    // get offset into output ptr
+    size_t sub_offset = offset % page_size;
+
+    void* raw_map = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, page_offset);
+    if(raw_map == MAP_FAILED) perror("ERROR MMAPING");
+    return raw_map + sub_offset;
+}
+
+static void munmap_unaligned(void* ptr, size_t size, size_t offset) {
+    long page_size = sysconf(_SC_PAGESIZE);
+    size_t sub_offset = offset % page_size;
+
+    void* raw_map = ptr - sub_offset;
+    int err = munmap(raw_map, size);
+    if(err < 0) perror("ERROR UNMAPPING");
+}
+
+
 enc_store_test enc_store_test_create(char* filename, enc_config cfg) {
     enc_store_test store;
-    store.file = open(filename, O_CREAT | O_RDWR);
+    store.file = open(filename, O_CREAT | O_RDWR, 0644);
     store.cfg = cfg;
     store.obj_cnt = 0;
     store.obj_reserved = 0;
@@ -30,7 +53,7 @@ enc_store_test enc_store_test_create(char* filename, enc_config cfg) {
 
 enc_store_test enc_store_test_open(char* filename, char* key) {
     enc_store_test store;
-    store.file = open(filename, O_RDWR);
+    store.file = open(filename, O_RDWR, 0644);
     store.obj_cnt = 0;
     store.obj_reserved = 0;
     store.objs = NULL;
@@ -66,7 +89,7 @@ enc_store_test enc_store_test_open(char* filename, char* key) {
     //  decrypt the meta blob
     offset += encrypted_size;
     size_t file_size = lseek(store.file, 0, SEEK_END);
-    void* meta_blob = mmap(NULL, encrypted_size, PROT_READ, MAP_SHARED, store.file, file_size - offset);
+    void* meta_blob = mmap_unaligned(store.file, encrypted_size, file_size - offset);
     char* nonce = meta_blob;
     enc_load_config(store.cfg);
     size_t nonce_size = enc_get_nonce_size();
@@ -84,7 +107,7 @@ enc_store_test enc_store_test_open(char* filename, char* key) {
     }
 
     free(meta_buf);
-    munmap(meta_blob, encrypted_size);
+    munmap_unaligned(meta_blob, encrypted_size, file_size - offset);
 
     size_t obj_offsets_size = sizeof(size_t) * store.obj_cnt;
     offset += obj_offsets_size;
@@ -124,7 +147,7 @@ void enc_store_test_close(enc_store_test store, char* key) {
 
     // allocate footer space
     ftruncate(store.file, file_end + encrypted_size);
-    void* meta_store = mmap(NULL, encrypted_size, PROT_WRITE, MAP_SHARED, store.file, store.cur_offset);
+    void* meta_store = mmap_unaligned(store.file, encrypted_size, store.cur_offset);
 
     // write nonce and encrypted data
     enc_load_config(store.cfg);
@@ -136,7 +159,7 @@ void enc_store_test_close(enc_store_test store, char* key) {
     enc_encrypt(meta_mem, cur_size, meta_store + nonce_size, cur_size);
 
     // cleanup
-    munmap(meta_store, cur_size);
+    munmap_unaligned(meta_store, encrypted_size, store.cur_offset);
     free(meta_mem);
     file_end += encrypted_size;
 
@@ -210,8 +233,9 @@ enc_grain_meta enc_store_test_get_meta(enc_store_test store, char* tag, char* ke
     // decrypt the grain metadata
     // return
     size_t encrypted_size = enc_get_encrypted_size(store.cfg, sizeof(enc_grain_meta));
-    void* grain_meta_store = mmap(NULL, encrypted_size, PROT_READ, MAP_SHARED, store.file, offset);
+    void* grain_meta_store = mmap_unaligned(store.file, encrypted_size, offset);
     enc_object_grain_meta_read(*obj, grain_pos, store.cfg, key, grain_meta_store);
+    munmap_unaligned(grain_meta_store, encrypted_size, offset);
 
     return obj->grains[0];
 }
@@ -240,9 +264,9 @@ void enc_store_test_read_object(enc_store_test store, char * tag, char* key, voi
 
         // use grain meta to read grain
         size_t data_size = enc_get_encrypted_size(store.cfg, obj->grains[grain_pos].size);
-        void* data_store = mmap(NULL, data_size, PROT_READ, MAP_SHARED, store.file, offset);
+        void* data_store = mmap_unaligned(store.file, data_size, offset);
         enc_object_grain_data_read(*obj, grain_pos, key, data, data_store); 
-        munmap(data_store, data_size);
+        munmap_unaligned(data_store, data_size, offset);
     }
 }
 
@@ -264,8 +288,7 @@ void enc_store_test_write_object(enc_store_test* store, char* tag, char* key, vo
         ftruncate(store->file, cur_file_size + total_size);
 
         // map
-        void* full_store = mmap(NULL, total_size, PROT_READ, MAP_SHARED, store->file, offset);
-        if(full_store == MAP_FAILED) perror("MMAP FAILED in enc_store_test_write_object");
+        void* full_store = mmap_unaligned(store->file, total_size, offset);
 
         void* meta_store = full_store;
         void* data_store = full_store + meta_size;
@@ -274,7 +297,7 @@ void enc_store_test_write_object(enc_store_test* store, char* tag, char* key, vo
         enc_object_grain_write(*obj, grain_pos, store->cfg, key, meta_store, data, data_store);
 
         //cleanup
-        munmap(full_store, total_size);
+        munmap_unaligned(full_store, total_size, offset);
         offset += total_size;
     }
     store->cur_offset = offset;
