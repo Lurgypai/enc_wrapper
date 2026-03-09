@@ -111,6 +111,7 @@ enc_store_test enc_store_test_open(char* filename, char* key) {
 
     size_t obj_offsets_size = sizeof(size_t) * store.obj_cnt;
     offset += obj_offsets_size;
+    lseek(store.file, -offset, SEEK_END);
     read(store.file, store.obj_offsets, obj_offsets_size);
 
     return store;
@@ -132,11 +133,11 @@ void enc_store_test_close(enc_store_test store, char* key) {
     void* meta_mem = NULL;
     for(int i = 0; i != store.obj_cnt; ++i) {
         // get metadata size
-        size_t meta_size = enc_object_get_meta_size(store.objs[1]);
+        size_t meta_size = enc_object_get_meta_size(store.objs[i]);
         // allocate space to put
         meta_mem = realloc(meta_mem, cur_size + meta_size);
         // put meta in, cur_size hasn't been updated, so its the old end offset
-        enc_object_put_meta(store.objs[1], meta_mem + cur_size);
+        enc_object_put_meta(store.objs[i], meta_mem + cur_size);
         // update cur_size
         cur_size += meta_size;
 
@@ -147,7 +148,7 @@ void enc_store_test_close(enc_store_test store, char* key) {
 
     // allocate footer space
     ftruncate(store.file, file_end + encrypted_size);
-    void* meta_store = mmap_unaligned(store.file, encrypted_size, store.cur_offset);
+    void* meta_store = mmap_unaligned(store.file, encrypted_size, file_end);
 
     // write nonce and encrypted data
     enc_load_config(store.cfg);
@@ -167,7 +168,7 @@ void enc_store_test_close(enc_store_test store, char* key) {
     enc_encrypt(meta_mem, cur_size, meta_store + nonce_size, cur_size);
 
     // cleanup
-    munmap_unaligned(meta_store, encrypted_size, store.cur_offset);
+    munmap_unaligned(meta_store, encrypted_size, file_end);
     free(meta_mem);
     file_end += encrypted_size;
 
