@@ -151,6 +151,14 @@ void enc_store_test_close(enc_store_test store, char* key) {
 
     // write nonce and encrypted data
     enc_load_config(store.cfg);
+    enc_set_key(key, enc_get_key_size());
+
+    size_t padding = 0;
+    size_t remainder = cur_size % enc_get_block_size();
+    if(remainder != 0) padding = enc_get_block_size() - remainder;
+    cur_size += padding;
+    meta_mem = realloc(meta_mem, cur_size);
+
     size_t nonce_size = enc_get_nonce_size();
     char* nonce = enc_make_nonce();
     enc_set_nonce(nonce, nonce_size);

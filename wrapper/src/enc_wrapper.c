@@ -66,6 +66,10 @@ size_t enc_get_nonce_size() {
     return Enc_Library_Impl->nonce_size;
 }
 
+size_t enc_get_block_size() {
+    return Enc_Library_Impl->block_size;
+}
+
 size_t enc_get_encrypted_size(enc_config cfg, size_t raw_size) {
     if(!is_inited) {
         fprintf(stderr, "ERROR: enc_get_encrypted_size, the encryption wrapper was not initialized (did you call enc_load_library?)\n");

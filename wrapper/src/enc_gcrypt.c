@@ -97,7 +97,9 @@ static size_t gcrypt_get_encrypted_size(enc_algorithm alg, size_t raw_size) {
             break;
     }
     unsigned int block_size = gcry_cipher_get_algo_blklen(cipher);
-    size_t padding = raw_size % block_size;
+    size_t padding = 0;
+    size_t remain = raw_size % block_size;
+    if(remain != 0) padding = block_size - remain;
     return raw_size + nonce_len + padding;
 }
 
@@ -113,6 +115,7 @@ enc_library_impl enc_get_gcrypt() {
         .make_nonce = gcrypt_make_nonce,
         .key_size = 0,
         .nonce_size = 0,
+        .block_size = 0,
         .get_encrypted_size = gcrypt_get_encrypted_size
     };
     return ret;
