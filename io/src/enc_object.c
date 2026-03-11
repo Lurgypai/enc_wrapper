@@ -65,6 +65,7 @@ void enc_object_put_meta(enc_object obj, void* meta_store) {
 void enc_object_parse_meta(enc_object* obj, void* meta_store) {
     memcpy(&obj->grain_cnt, meta_store, sizeof(obj->grain_cnt));
     memcpy(&obj->tag_size, meta_store + sizeof(obj->grain_cnt), sizeof(obj->tag_size));
-    obj->tag = malloc(obj->tag_size);
+    obj->tag = malloc(obj->tag_size + 1);
+    obj->tag[obj->tag_size] = '\0';
     memcpy(obj->tag, meta_store + sizeof(obj->grain_cnt) + sizeof(obj->tag_size), obj->tag_size);
 }
