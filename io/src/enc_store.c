@@ -10,7 +10,6 @@
 
 #include "enc_wrapper.h"
 
-
 static void* mmap_unaligned(int fd, size_t size, size_t offset) {
     long page_size = sysconf(_SC_PAGESIZE);
 
@@ -113,10 +112,18 @@ enc_store enc_store_open(char* filename, char* key) {
 
     store.obj_reserved = store.obj_cnt;
 
-    store.objs = malloc(sizeof(enc_object) * store.obj_cnt);
+    store.objs = malloc(sizeof(enc_object_desc) * store.obj_cnt);
     for(int obj_idx = 0; obj_idx != store.obj_cnt; ++obj_idx) {
-        enc_object_parse_meta(store.objs + obj_idx, blob_mem + offset);
-        offset += enc_object_get_meta_size(store.objs[obj_idx]);
+        enc_object* obj = &store.objs[obj_idx].obj;
+        // parse object meta
+        enc_object_parse_meta(obj, blob_mem + offset);
+        offset += enc_object_get_meta_size(*obj);
+        memcpy(&store.objs[obj_idx].layout, blob_mem + offset, sizeof(enc_object_layout));
+        offset += sizeof(enc_object_layout);
+
+        // allocate grains
+        if(obj->grain_cnt > 0) obj->grains = malloc(sizeof(enc_grain_meta) * obj->grain_cnt);
+        else obj->grains = NULL;
     }
 
     free(blob_mem);
@@ -138,10 +145,15 @@ void enc_store_close(enc_store store, char* key) {
 
     // add obj metadatas to blob
     for(int obj_idx = 0; obj_idx != store.obj_cnt; ++obj_idx) {
-        size_t obj_size = enc_object_get_meta_size(store.objs[obj_idx]);
-        obj_blob = realloc(obj_blob, obj_blob_size + obj_size);
-        enc_object_put_meta(store.objs[obj_idx], obj_blob + obj_blob_size);
+        size_t obj_size = enc_object_get_meta_size(store.objs[obj_idx].obj);
+        // alocate space for object and layout
+        obj_blob = realloc(obj_blob, obj_blob_size + obj_size + sizeof(enc_object_layout));
+        // copy obj
+        enc_object_put_meta(store.objs[obj_idx].obj, obj_blob + obj_blob_size);
         obj_blob_size += obj_size;
+        // copy layout
+        memcpy(obj_blob + obj_blob_size, &store.objs[obj_idx].layout, sizeof(enc_object_layout));
+        obj_blob_size += sizeof(enc_object_layout);
     }
 
     size_t blk_size = enc_get_block_size();
@@ -173,27 +185,28 @@ void enc_store_close(enc_store store, char* key) {
     free(store.objs);
 }
 
-void enc_store_add_object(enc_store* store, char* tag) {
+void enc_store_add_object(enc_store* store, char* tag, enc_object_layout layout) {
     size_t pos = store->obj_cnt;
     ++store->obj_cnt;
 
     if(store->objs == NULL) {
-        store->objs = malloc(sizeof(enc_object));
+        store->objs = malloc(sizeof(enc_object_desc));
         store->obj_reserved = 1;
     }
     else if (store->obj_cnt > store->obj_reserved) {
         store->obj_reserved *= 2;
-        store->objs = realloc(store->objs, store->obj_reserved * sizeof(enc_object));
+        store->objs = realloc(store->objs, store->obj_reserved * sizeof(enc_object_desc));
     }
 
-    store->objs[pos] = enc_object_make(tag);
+    store->objs[pos].obj = enc_object_make(tag);
+    store->objs[pos].layout = layout;
 }
 
 static size_t get_object_idx(enc_store store, char* tag) {
     enc_object* obj = NULL;
     size_t i;
     for(i = 0; i != store.obj_cnt; ++i) {
-        obj = store.objs + i;
+        obj = &store.objs[i].obj;
         if(strcmp(obj->tag, tag) == 0) break;
     }
 
@@ -208,5 +221,83 @@ static size_t get_object_idx(enc_store store, char* tag) {
 
 enc_object* enc_store_get_object(enc_store store, char* tag) {
     size_t obj_idx = get_object_idx(store, tag);
-    return store.objs + obj_idx;
+    return &store.objs[obj_idx].obj;
+}
+
+static void write_grains_joined(enc_config cfg, char* name, enc_object obj, char* key) {
+    // get filename
+    // generate meta blob
+    // mmap and encrypt into
+    char* grains_filename = malloc(obj.tag_size + 8);
+    memcpy(grains_filename, obj.tag, obj.tag_size);
+    memcpy(grains_filename + obj.tag_size, "_grains", 8);
+    grains_filename[obj.tag_size + 8] = '\0';
+
+    char* filename = append_path(name, grains_filename);
+    int file = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
+    free(grains_filename);
+
+    enc_load_config(cfg);
+    enc_set_key(key, enc_get_key_size());
+
+    size_t blob_size = sizeof(enc_grain_meta) * obj.grain_cnt;
+    size_t encrypted_size = enc_get_encrypted_size(cfg, blob_size);
+
+    ftruncate(file, encrypted_size);
+
+    void* dest = mmap_unaligned(file, encrypted_size, 0);
+
+    size_t nonce_size = enc_get_nonce_size();
+    char* nonce = enc_make_nonce();
+    enc_set_nonce(nonce, enc_get_nonce_size());
+    memcpy(dest, nonce, nonce_size);
+    enc_encrypt(obj.grains, blob_size, dest + nonce_size, blob_size);
+
+    free(nonce);
+    munmap_unaligned(dest, encrypted_size, 0);
+    free(filename);
+}
+
+void enc_store_grains_write(enc_store store, char* tag, char* key) {
+    size_t obj_idx = get_object_idx(store, tag);
+    enc_object_desc* obj = &store.objs[obj_idx];
+    switch(obj->layout) {
+        case enc_object_layout_joined:
+            write_grains_joined(store.cfg, store.name, obj->obj, key);
+            break;
+    }
+}
+
+static void read_grains_joined(enc_config cfg, char* name, enc_object obj, char* key) {
+    char * filename = append_path(name, "grains");
+    int file = open(filename, O_RDWR, 0644);
+
+    enc_load_config(cfg);
+    enc_set_key(key, enc_get_key_size());
+
+    size_t blob_size = sizeof(enc_grain_meta) * obj.grain_cnt;
+    size_t encrypted_size = enc_get_encrypted_size(cfg, blob_size);
+
+    void* src = mmap_unaligned(file, encrypted_size, 0);
+
+    size_t nonce_size = enc_get_nonce_size();
+    char* nonce = malloc(nonce_size);
+    memcpy(nonce, src, nonce_size);
+    enc_set_nonce(nonce, nonce_size);
+
+    enc_decrypt(src + nonce_size, blob_size, obj.grains, blob_size);
+
+    free(nonce);
+    munmap_unaligned(src, encrypted_size, 0);
+    free(filename);
+}
+
+void enc_store_grains_read(enc_store store, char* tag, char* key) {
+    size_t obj_idx = get_object_idx(store, tag);
+    enc_object_desc* obj = &store.objs[obj_idx];
+    switch(obj->layout) {
+        case enc_object_layout_joined:
+            read_grains_joined(store.cfg, store.name, obj->obj, key);
+            break;
+    }
 }
