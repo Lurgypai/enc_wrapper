@@ -15,6 +15,9 @@ typedef struct enc_grain_meta_ {
 enc_grain_meta enc_grain_meta_read(void* meta_store, char* key);
 void enc_grain_data_read(enc_grain_meta meta, void* data_store, void* data_mem, char* key);
 
+void enc_grain_meta_write(enc_grain_meta meta, void* meta_store, char* key);
+void enc_grain_data_write(enc_grain_meta meta, void* data_store, void* data_mem, char* key);
+
 void enc_grain_write(enc_grain_meta meta, void* meta_store, void* data_mem, void* data_store, char* key);
 
 // in the current implementation, meta and data are written and read (and thus encrypted and unencrypted) separately. this means additional overhead for each. might be useful to add functions that read/write them together (alternate layout that supports contiguous)
