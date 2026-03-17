@@ -32,6 +32,40 @@ int test_enc_grain_write() {
     return 0;
 }
 
+int test_enc_grain_data_write_and_read() {
+    enc_grain_meta meta = {
+        .size = CHUNK_SIZE,
+        .cfg = {
+            .alg = aes256,
+            .lib = enc_lib_gcrypt
+        }
+    };
+    enc_load_config(meta.cfg);
+    char data_mem[CHUNK_SIZE] = {0};
+
+    size_t data_store_size = enc_get_encrypted_size(meta.cfg, CHUNK_SIZE);
+    void* data_store = malloc(data_store_size);
+
+    char* key = enc_make_key();
+    enc_grain_data_write(meta, data_store, data_mem, key);
+
+    char data_mem_2[CHUNK_SIZE] = {0};
+    for(int i = 0; i != CHUNK_SIZE; ++i) {
+        data_mem_2[i] = i % 256;
+    }
+
+    enc_grain_data_read(meta, data_store, data_mem_2, key);
+
+    int ret = 0;
+    for(int i = 0; i != CHUNK_SIZE; ++i) {
+        if(data_mem[i] != data_mem_2[i]) {
+            printf("data_mem[%d] doesn't match data_mem_2[%d], %d != %d\n", i, i, data_mem[i], data_mem_2[i]);
+            ret = 1;
+        }
+    }
+    return ret;
+}
+
 int test_enc_grain_meta_read() {
     enc_grain_meta meta = {
         .size = CHUNK_SIZE,
@@ -112,6 +146,7 @@ int main(int argc, char** argv) {
     printf("test_enc_grain_write: %d\n", test_enc_grain_write());
     printf("test_enc_grain_meta_read: %d\n", test_enc_grain_meta_read());
     printf("test_enc_grain_data_read: %d\n", test_enc_grain_data_read());
+    printf("test_enc_grain_data_write_and_read: %d\n", test_enc_grain_data_write_and_read());
 
     return 0;
 }

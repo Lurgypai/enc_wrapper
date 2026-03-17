@@ -65,6 +65,7 @@ enc_store enc_store_create(char* filename, enc_config cfg) {
     if(store.root_file < 0) {
         perror("ERROR OPENING FILE IN enc_store_create");
         exit(1);
+        exit(1);
     }
 
     store.name = strdup(filename);
@@ -230,7 +231,7 @@ static void write_grains_joined(enc_config cfg, char* name, enc_object obj, char
     // mmap and encrypt into
     char* grains_filename = malloc(obj.tag_size + 8);
     memcpy(grains_filename, obj.tag, obj.tag_size);
-    memcpy(grains_filename + obj.tag_size, "_grains", 8);
+    memcpy(grains_filename + obj.tag_size, "-grains", 8);
     grains_filename[obj.tag_size + 8] = '\0';
 
     char* filename = append_path(name, grains_filename);
@@ -271,7 +272,7 @@ void enc_store_grains_write(enc_store store, char* tag, char* key) {
 static void read_grains_joined(enc_config cfg, char* name, enc_object obj, char* key) {
     char* grains_filename = malloc(obj.tag_size + 8);
     memcpy(grains_filename, obj.tag, obj.tag_size);
-    memcpy(grains_filename + obj.tag_size, "_grains", 8);
+    memcpy(grains_filename + obj.tag_size, "-grains", 8);
     grains_filename[obj.tag_size + 8] = '\0';
     char * filename = append_path(name, grains_filename);
     int file = open(filename, O_RDWR, 0644);
@@ -316,8 +317,20 @@ static void map_grain(enc_store store, int obj_idx, int grain_idx, void** data_o
     char* filename = append_path(store.name, grain_filename);
     free(grain_filename);
 
-    *file_out = open(filename, O_RDWR, 0644);
-    *data_out = mmap(NULL, grain->size, PROT_READ | PROT_WRITE, MAP_SHARED, *file_out, 0);
+    *file_out = open(filename, O_RDWR | O_CREAT, 0644);
+    if(*file_out < 0) { 
+        perror("FAILED TO OPEN GRAIN FILE");
+        exit(1);
+    }
+
+    size_t encrypted_size = enc_get_encrypted_size(grain->cfg, grain->size);
+    ftruncate(*file_out, encrypted_size);
+
+    *data_out = mmap(NULL, encrypted_size, PROT_READ | PROT_WRITE, MAP_SHARED, *file_out, 0);
+    if(*data_out == MAP_FAILED) {
+        perror("FAILED TO MAP GRAIN");
+        exit(1);
+    }
 
     free(filename);
 }
@@ -329,38 +342,135 @@ static void unmap_grain(enc_store store, int obj_idx, int grain_idx, void* data,
     close(file);
 }
 
+// returns local io size
+// in_data has to be the data we want to write to this grain
+static size_t write_to_grain(enc_store store, int obj_idx, int grain_idx,
+                            size_t offset, size_t grain_offset, size_t remaining_size,
+                            void* in_data, char* key) {
+    enc_object* obj = &store.objs[obj_idx].obj;
+    enc_grain_meta* grain = &obj->grains[grain_idx];
+    // offset into grain
+    // if the offset is before this grain, write at start of grain
+    // else set to how far into the grain the offset is
+    size_t local_offset = offset < grain_offset ? 0 : offset - grain_offset;
+    // the local remaining is either the rest of the grain or however much io remains
+    size_t local_remaining_size = remaining_size < grain->size - local_offset ?
+        remaining_size : grain->size - local_offset;
+
+    /*
+    printf("DEBUG: writing to grain\n");
+    printf("\tobj_idx: %d, grain_idx: %d\n", obj_idx, grain_idx);
+    printf("\toffset: %lu, grain_offset: %lu, remaining_size: %lu\n", offset, grain_offset, remaining_size);
+    printf("\tlocal_offset: %lu, local_remaining_size: %lu\n", local_offset, local_remaining_size);
+    */
+
+    void* data_store = NULL;
+    int file = 0;
+    map_grain(store, obj_idx, grain_idx, &data_store, &file);
+
+    void* data = in_data;
+    int unaligned = local_offset != 0 || local_remaining_size != grain->size;
+    if(unaligned) {
+            data = malloc(grain->size);
+            enc_object_grain_data_read(*obj, grain_idx, key, data, data_store);
+            memcpy(data + local_offset, in_data, local_remaining_size);
+    }
+
+    enc_grain_data_write(*grain, data_store, data, key);
+
+    unmap_grain(store, obj_idx, grain_idx, data_store, file);
+    if(unaligned) free(data);
+
+    return local_remaining_size;
+}
+
 void enc_store_write(enc_store store, char* tag, size_t offset, size_t size, void* in_data, char* key) {
     size_t obj_idx = get_object_idx(store, tag);
     enc_object_desc* obj = store.objs + obj_idx;
 
     size_t cur_offset = 0;
+    size_t remaining_size = size;
 
     for(int grain_idx = 0; grain_idx != obj->obj.grain_cnt; ++grain_idx) {
         enc_grain_meta* cur_grain = obj->obj.grains + grain_idx;
-        // if this grain covers the start, initiate the write
-        if(offset < cur_offset + cur_grain->size) {
-            // read modify write
-            // read
-            void* data = malloc(cur_grain->size);
-            void* data_store = NULL;
-            int file = 0;
-            map_grain(store, obj_idx, grain_idx, &data_store, &file);
-            enc_object_grain_data_read(obj->obj, grain_idx, key, data, data_store);
 
-            size_t local_offset = offset - cur_offset;
-            size_t local_size = cur_grain->size - local_offset;
+        // printf("W, candidate grain, offset %lu, size %lu\n", cur_offset, cur_grain->size);
 
-            // modify
-            memcpy(data + local_offset, in_data, local_size);
-
-            // write
-            enc_grain_data_write(*cur_grain, data_store, data,  key);
-
-            unmap_grain(store, obj_idx, grain_idx, data_store, file);;
-            free(data);
+        // if grain doesn't overlap with io, continue
+        if(cur_offset + cur_grain->size <= offset || offset + size <= cur_offset) {
+            cur_offset += obj->obj.grains[grain_idx].size;
+            continue;
         }
+
+        size_t written = write_to_grain(store, obj_idx, grain_idx,
+                offset, cur_offset, remaining_size, in_data, key);
+
+        remaining_size -= written;
+        if(remaining_size == 0) break;
+        in_data += written;
 
         cur_offset += obj->obj.grains[grain_idx].size;
     }
+}
 
+static size_t read_from_grain(enc_store store, int obj_idx, int grain_idx,
+                            size_t offset, size_t grain_offset, size_t remaining_size,
+                            void* out_data, char* key) {
+    enc_object* obj = &store.objs[obj_idx].obj;
+    enc_grain_meta* grain = &obj->grains[grain_idx];
+    size_t local_offset = offset < grain_offset ? 0 : offset - grain_offset;
+    size_t local_remaining_size = remaining_size < grain->size - local_offset ?
+        remaining_size : grain->size - local_offset;
+    /*
+    printf("DEBUG: reading from grain\n");
+    printf("\tobj_idx: %d, grain_idx: %d\n", obj_idx, grain_idx);
+    printf("\toffset: %lu, grain_offset: %lu, remaining_size: %lu\n", offset, grain_offset, remaining_size);
+    printf("\tlocal_offset: %lu, local_remaining_size: %lu\n", local_offset, local_remaining_size);
+    */
+
+    void* data_store = NULL;
+    int file = 0;
+    map_grain(store, obj_idx, grain_idx, &data_store, &file);
+    int unaligned = local_offset != 0 || local_remaining_size != grain->size;
+
+    if(unaligned) {
+        // read locally, copy necessary
+        void* data_mem = malloc(grain->size);
+        enc_grain_data_read(*grain, data_store, data_mem, key);
+        memcpy(out_data, data_mem + local_offset, local_remaining_size);
+        free(data_mem);
+    }
+    else {
+        enc_grain_data_read(*grain, data_store, out_data, key);
+    }
+
+    unmap_grain(store, obj_idx, grain_idx, data_store, file);
+    return local_remaining_size;
+}
+
+void enc_store_read(enc_store store, char* tag, size_t offset, size_t size, void* out_data, char* key) {
+    size_t obj_idx = get_object_idx(store, tag);
+    enc_object_desc* obj = store.objs + obj_idx;
+
+    size_t cur_offset = 0;
+    size_t remaining_size = size;
+
+    for(int grain_idx = 0; grain_idx != obj->obj.grain_cnt; ++grain_idx) {
+        enc_grain_meta* cur_grain = obj->obj.grains + grain_idx;
+        // printf("R, candidate grain, offset %lu, size %lu\n", cur_offset, cur_grain->size);
+        // if grain doesn't overlap with io, continue
+        if(cur_offset + cur_grain->size <= offset || offset + size <= cur_offset) {
+            cur_offset += obj->obj.grains[grain_idx].size;
+            continue;
+        }
+
+        size_t written = read_from_grain(store, obj_idx, grain_idx,
+                offset, cur_offset, remaining_size, out_data, key);
+
+        remaining_size -= written;
+        if(remaining_size == 0) break;
+        out_data += written;
+
+        cur_offset += obj->obj.grains[grain_idx].size;
+    }
 }
