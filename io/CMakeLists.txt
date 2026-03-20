@@ -48,9 +48,6 @@ configure_package_config_file(
 # install config
 install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/enc_ioConfig.cmake"
-    cmake/FindGCrypt.cmake
-    cmake/FindGPGError.cmake
-    cmake/FindNettle.cmake
     DESTINATION cmake
 )
 
