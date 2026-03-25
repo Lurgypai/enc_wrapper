@@ -346,7 +346,7 @@ static void unmap_grain(enc_store store, int obj_idx, int grain_idx, void* data,
 // in_data has to be the data we want to write to this grain
 static size_t write_to_grain(enc_store store, int obj_idx, int grain_idx,
                             size_t offset, size_t grain_offset, size_t remaining_size,
-                            void* in_data, char* key) {
+                            const void* in_data, char* key) {
     enc_object* obj = &store.objs[obj_idx].obj;
     enc_grain_meta* grain = &obj->grains[grain_idx];
     // offset into grain
@@ -368,7 +368,9 @@ static size_t write_to_grain(enc_store store, int obj_idx, int grain_idx,
     int file = 0;
     map_grain(store, obj_idx, grain_idx, &data_store, &file);
 
-    void* data = in_data;
+    // cast away the const to silence errors.
+    // we don't modify this, but we might replace it, and need to free it
+    void* data = (void*)in_data;
     int unaligned = local_offset != 0 || local_remaining_size != grain->size;
     if(unaligned) {
             data = malloc(grain->size);
@@ -384,7 +386,7 @@ static size_t write_to_grain(enc_store store, int obj_idx, int grain_idx,
     return local_remaining_size;
 }
 
-void enc_store_write(enc_store store, const char* tag, size_t offset, size_t size, void* in_data, char* key) {
+void enc_store_write(enc_store store, const char* tag, size_t offset, size_t size, const void* in_data, char* key) {
     size_t obj_idx = get_object_idx(store, tag);
     enc_object_desc* obj = store.objs + obj_idx;
 

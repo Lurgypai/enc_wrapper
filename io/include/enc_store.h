@@ -33,7 +33,7 @@ enc_object* enc_store_get_object(enc_store store, const char* tag);
 void enc_store_grains_write(enc_store store, const char* tag, char* key);
 void enc_store_grains_read(enc_store store, const char* tag, char* key);
 
-void enc_store_write(enc_store store, const char* tag, size_t offset, size_t size, void* in_data, char* key);
+void enc_store_write(enc_store store, const char* tag, size_t offset, size_t size, const void* in_data, char* key);
 void enc_store_read(enc_store store, const char* tag, size_t offset, size_t size, void* out_data, char* key);
 
 
