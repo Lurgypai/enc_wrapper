@@ -33,7 +33,7 @@ static void munmap_unaligned(void* ptr, size_t size, size_t offset) {
 }
 
 // allocates memory, must be freed
-static char* append_path(char* path, char* to_append) {
+static char* append_path(const char* path, char* to_append) {
     size_t path_len = strlen(path);
     size_t append_len = strlen(to_append);
 
@@ -47,7 +47,7 @@ static char* append_path(char* path, char* to_append) {
     return ret;
 }
 
-enc_store enc_store_create(char* filename, enc_config cfg) {
+enc_store enc_store_create(const char* filename, enc_config cfg) {
     enc_store store = {
         .root_file = -1,
         .name = NULL,
@@ -73,7 +73,7 @@ enc_store enc_store_create(char* filename, enc_config cfg) {
     return store;
 }
 
-enc_store enc_store_open(char* filename, char* key) {
+enc_store enc_store_open(const char* filename, char* key) {
     enc_store store = {
         .root_file = -1,
         .name = NULL,
@@ -186,7 +186,7 @@ void enc_store_close(enc_store store, char* key) {
     free(store.objs);
 }
 
-void enc_store_add_object(enc_store* store, char* tag, enc_object_layout layout) {
+void enc_store_add_object(enc_store* store, const char* tag, enc_object_layout layout) {
     size_t pos = store->obj_cnt;
     ++store->obj_cnt;
 
@@ -203,7 +203,7 @@ void enc_store_add_object(enc_store* store, char* tag, enc_object_layout layout)
     store->objs[pos].layout = layout;
 }
 
-static size_t get_object_idx(enc_store store, char* tag) {
+static size_t get_object_idx(enc_store store, const char* tag) {
     enc_object* obj = NULL;
     size_t i;
     for(i = 0; i != store.obj_cnt; ++i) {
@@ -220,7 +220,7 @@ static size_t get_object_idx(enc_store store, char* tag) {
     return i;
 }
 
-enc_object* enc_store_get_object(enc_store store, char* tag) {
+enc_object* enc_store_get_object(enc_store store, const char* tag) {
     size_t obj_idx = get_object_idx(store, tag);
     return &store.objs[obj_idx].obj;
 }
@@ -259,7 +259,7 @@ static void write_grains_joined(enc_config cfg, char* name, enc_object obj, char
     free(filename);
 }
 
-void enc_store_grains_write(enc_store store, char* tag, char* key) {
+void enc_store_grains_write(enc_store store, const char* tag, char* key) {
     size_t obj_idx = get_object_idx(store, tag);
     enc_object_desc* obj = &store.objs[obj_idx];
     switch(obj->layout) {
@@ -269,7 +269,7 @@ void enc_store_grains_write(enc_store store, char* tag, char* key) {
     }
 }
 
-static void read_grains_joined(enc_config cfg, char* name, enc_object obj, char* key) {
+static void read_grains_joined(enc_config cfg, const char* name, enc_object obj, char* key) {
     char* grains_filename = malloc(obj.tag_size + 8);
     memcpy(grains_filename, obj.tag, obj.tag_size);
     memcpy(grains_filename + obj.tag_size, "-grains", 8);
@@ -298,7 +298,7 @@ static void read_grains_joined(enc_config cfg, char* name, enc_object obj, char*
     free(filename);
 }
 
-void enc_store_grains_read(enc_store store, char* tag, char* key) {
+void enc_store_grains_read(enc_store store, const char* tag, char* key) {
     size_t obj_idx = get_object_idx(store, tag);
     enc_object_desc* obj = &store.objs[obj_idx];
     switch(obj->layout) {
@@ -384,7 +384,7 @@ static size_t write_to_grain(enc_store store, int obj_idx, int grain_idx,
     return local_remaining_size;
 }
 
-void enc_store_write(enc_store store, char* tag, size_t offset, size_t size, void* in_data, char* key) {
+void enc_store_write(enc_store store, const char* tag, size_t offset, size_t size, void* in_data, char* key) {
     size_t obj_idx = get_object_idx(store, tag);
     enc_object_desc* obj = store.objs + obj_idx;
 
@@ -448,7 +448,7 @@ static size_t read_from_grain(enc_store store, int obj_idx, int grain_idx,
     return local_remaining_size;
 }
 
-void enc_store_read(enc_store store, char* tag, size_t offset, size_t size, void* out_data, char* key) {
+void enc_store_read(enc_store store, const char* tag, size_t offset, size_t size, void* out_data, char* key) {
     size_t obj_idx = get_object_idx(store, tag);
     enc_object_desc* obj = store.objs + obj_idx;
 
