@@ -37,7 +37,7 @@ enc_library_impl enc_get_dummy() {
         .make_nonce = dummy_make_nonce,
         .key_size = 1,
         .nonce_size = 1,
-        .block_size = 0,
+        .block_size = 1,
         .get_encrypted_size = dummy_get_encrypted_size
     };
     return ret;
