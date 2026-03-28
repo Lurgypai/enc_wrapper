@@ -157,6 +157,7 @@ void enc_store_close(enc_store store, char* key) {
         obj_blob_size += sizeof(enc_object_layout);
     }
 
+    enc_load_config(store.cfg);
     size_t blk_size = enc_get_block_size();
     size_t remainder = obj_blob_size % blk_size;
     if(remainder != 0) {
@@ -170,7 +171,6 @@ void enc_store_close(enc_store store, char* key) {
     void* meta_store = mmap_unaligned(store.root_file, encrypted_size, offset);
 
     // encrypt into file
-    enc_load_config(store.cfg);
     enc_set_key(key, enc_get_key_size());
     char* nonce = enc_make_nonce();
     size_t nonce_size = enc_get_nonce_size();
