@@ -8,6 +8,8 @@ typedef enum enc_algorithm {
 } enc_algorithm;
 
 typedef enum enc_library_ {
+    enc_lib_none,
+    enc_lib_dummy,
     enc_lib_gcrypt,
     enc_lib_nettle
 } enc_library;

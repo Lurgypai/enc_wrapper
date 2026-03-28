@@ -9,7 +9,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 option(ENC_WRAPPER_ENABLE_GCRYPT "Enable gcrypt library support." ON)
 option(ENC_WRAPPER_ENABLE_NETTLE "Enable nettle library support." ON)
 
-set(ENC_WRAPPER_SRC "src/enc_wrapper.c" "src/enc_gcrypt.c" "src/enc_nettle.c")
+set(ENC_WRAPPER_SRC "src/enc_wrapper.c" "src/enc_gcrypt.c" "src/enc_nettle.c" "src/enc_dummy.c")
 set(ENC_WRAPPER_LIBS)
 set(ENC_WRAPPER_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
