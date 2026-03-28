@@ -22,7 +22,7 @@ static char* dummy_make_nonce() {
 }
 
 static size_t dummy_get_encrypted_size(enc_algorithm alg, size_t raw_size) {
-    return raw_size;
+    return raw_size + 1;
 }
 
 enc_library_impl enc_get_dummy() {
