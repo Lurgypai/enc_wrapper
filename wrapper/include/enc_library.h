@@ -10,6 +10,7 @@ typedef struct enc_library_impl {
     int (*encrypt)(void* source, size_t source_size, void* dest, size_t dest_size, size_t blk_len); 
     int (*decrypt)(void* source, size_t source_size, void* dest, size_t dest_size, size_t blk_len); 
     int (*reset)();
+    int (*close)();
 
     char* (*make_key)(size_t key_size);
     char* (*make_nonce)(size_t nonce_size);

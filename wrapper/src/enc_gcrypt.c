@@ -26,6 +26,8 @@ static int gcrypt_prepare(enc_algorithm alg, size_t* key_len, size_t* nonce_len,
             mode = GCRY_CIPHER_MODE_STREAM;
             *nonce_len = 12;
             break;
+        default:
+            break;
     }
 
     *blk_len = gcry_cipher_get_algo_blklen(cipher);
@@ -68,6 +70,11 @@ static int gcrypt_reset() {
     return 0;
 }
 
+static int gcrypt_close() {
+    gcry_cipher_close(handle);
+    return 0;
+}
+
 static char* make_random(size_t size) {
     char* data = malloc(size);
     gcry_randomize(data, size, GCRY_VERY_STRONG_RANDOM);
@@ -95,6 +102,8 @@ static size_t gcrypt_get_encrypted_size(enc_algorithm alg, size_t raw_size) {
             cipher = GCRY_CIPHER_CHACHA20;
             nonce_len = 12;
             break;
+        default:
+            break;
     }
     unsigned int block_size = gcry_cipher_get_algo_blklen(cipher);
     size_t padding = 0;
@@ -111,6 +120,7 @@ enc_library_impl enc_get_gcrypt() {
         .encrypt = gcrypt_encrypt,
         .decrypt = gcrypt_decrypt,
         .reset = gcrypt_reset,
+        .close = gcrypt_close,
         .make_key = gcrypt_make_key,
         .make_nonce = gcrypt_make_nonce,
         .key_size = 0,

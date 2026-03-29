@@ -8,10 +8,12 @@
 
 static int is_inited = 0;
 static enc_library_impl Impls[4];
+static enc_library Cur_Library;
 static enc_library_impl* Enc_Library_Impl;
 
 static void init_libraries() {
     if(!is_inited) {
+        Cur_Library = enc_lib_none;
         Impls[enc_lib_dummy] = enc_get_dummy();
         Impls[enc_lib_gcrypt] = enc_get_gcrypt();
         Impls[enc_lib_nettle] = enc_get_nettle();
@@ -21,7 +23,9 @@ static void init_libraries() {
 
 int enc_load_library(enc_library enc_lib) {
     init_libraries();
+    if(Cur_Library != enc_lib_none) enc_close();
     Enc_Library_Impl = Impls + enc_lib;
+    Cur_Library = enc_lib;
     return 0;
 }
 
@@ -63,6 +67,13 @@ int enc_decrypt(void* source, size_t source_size, void* dest, size_t dest_size) 
 int enc_reset() {
     if(Enc_Library_Impl->reset == NULL) return 0;
     (*Enc_Library_Impl->reset)();
+    return 0;
+}
+
+int enc_close() {
+    if(Enc_Library_Impl->close == NULL) return 0;
+    (*Enc_Library_Impl->close)();
+    Cur_Library = enc_lib_none;
     return 0;
 }
 

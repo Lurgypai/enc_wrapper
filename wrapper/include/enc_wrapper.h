@@ -12,6 +12,7 @@ int enc_set_nonce(char* nonce, size_t key_len);
 int enc_encrypt(void* source, size_t source_size, void* dest, size_t dest_size); 
 int enc_decrypt(void* source, size_t source_size, void* dest, size_t dest_size); 
 int enc_reset();
+int enc_close();
 size_t enc_get_key_size();
 size_t enc_get_nonce_size();
 size_t enc_get_block_size();

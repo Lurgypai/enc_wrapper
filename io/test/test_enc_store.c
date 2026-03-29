@@ -1,7 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "enc_store.h"
 #include "enc_wrapper.h"
+
 
 #define REGION_SIZE 4096
 
@@ -94,5 +96,7 @@ int main(int argc, char** argv) {
     }
 
     enc_store_close(store, key);
+
+    free(key);
     return 0;
 }

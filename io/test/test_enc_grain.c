@@ -29,6 +29,7 @@ int test_enc_grain_write() {
     free(data_store);
     free(meta_store);
 
+    enc_close();
     return 0;
 }
 
@@ -63,6 +64,9 @@ int test_enc_grain_data_write_and_read() {
             ret = 1;
         }
     }
+    free(data_store);
+    free(key);
+    enc_close();
     return ret;
 }
 
@@ -97,6 +101,7 @@ int test_enc_grain_meta_read() {
     printf("\tmeta.cfg.alg: %d, %d\n", meta.cfg.alg, meta2.cfg.alg);
     printf("\tmeta.cfg.lib: %d, %d\n", meta.cfg.lib, meta2.cfg.lib);
 
+    enc_close();
     return !(meta.size == meta2.size && meta.cfg.alg == meta2.cfg.alg && meta.cfg.lib == meta2.cfg.lib);
 }
 
@@ -138,6 +143,7 @@ int test_enc_grain_data_read() {
         }
     }
 
+    enc_close();
     return !is_zero;
 }
 
