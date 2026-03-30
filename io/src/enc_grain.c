@@ -43,7 +43,9 @@ void enc_grain_data_read(enc_grain_meta meta, void* data_store, void* data_mem, 
     free(nonce);
 }
 
-void enc_grain_meta_write(enc_grain_meta meta, void* meta_store, char* key) {
+void enc_grain_meta_write(enc_config meta_cfg, enc_grain_meta meta, void* meta_store, char* key) {
+    enc_load_config(meta_cfg);
+
     enc_set_key(key, enc_get_key_size());
     char* nonce = enc_make_nonce();
     size_t nonce_size = enc_get_nonce_size();
@@ -53,10 +55,13 @@ void enc_grain_meta_write(enc_grain_meta meta, void* meta_store, char* key) {
     enc_encrypt(&meta, sizeof(meta), meta_store + nonce_size, sizeof(meta));
 
     free(nonce);
+
+    enc_close();
 }
 
 void enc_grain_data_write(enc_grain_meta meta, void* data_store, void* data_mem, char* key) {
     enc_load_config(meta.cfg);
+
     enc_set_key(key, enc_get_key_size());
     char* nonce = enc_make_nonce();
     size_t nonce_size = enc_get_nonce_size();
@@ -64,10 +69,12 @@ void enc_grain_data_write(enc_grain_meta meta, void* data_store, void* data_mem,
     enc_set_nonce(nonce, nonce_size);
     enc_encrypt(data_mem, meta.size, data_store + nonce_size, meta.size);
     free(nonce);
+
+    enc_close();
 }
 
-void enc_grain_write(enc_grain_meta meta, void* meta_store, void* data_mem, void* data_store, char* key) {
-    enc_grain_meta_write(meta, meta_store, key);
+void enc_grain_write(enc_config meta_cfg, enc_grain_meta meta, void* meta_store, void* data_mem, void* data_store, char* key) {
+    enc_grain_meta_write(meta_cfg, meta, meta_store, key);
     enc_grain_data_write(meta, data_store, data_mem, key);
 }
 

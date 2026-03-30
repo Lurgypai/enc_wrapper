@@ -2,8 +2,6 @@
 
 #include <stdlib.h>
 
-#include "enc_wrapper.h"
-
 enc_object enc_object_make(const char* tag) {
     enc_object obj;
     obj.tag = strdup(tag);
@@ -38,7 +36,6 @@ size_t enc_object_add_grain(enc_object* obj, enc_grain_meta grain) {
 }
 
 void enc_object_grain_meta_read(enc_object obj, size_t grain_idx, enc_config meta_conf, char* key, void* meta_store) {
-    enc_load_config(meta_conf);
     obj.grains[grain_idx] = enc_grain_meta_read(meta_store, key);
 }
 
@@ -47,8 +44,7 @@ void enc_object_grain_data_read(enc_object obj, size_t grain_idx, char* key, voi
 }
 
 void enc_object_grain_write(enc_object obj, size_t grain_idx, enc_config meta_conf, char* key, void* meta_store, void* data_mem, void* data_store) {
-    enc_load_config(meta_conf);
-    enc_grain_write(obj.grains[grain_idx], meta_store, data_mem, data_store, key);
+    enc_grain_write(meta_conf, obj.grains[grain_idx], meta_store, data_mem, data_store, key);
 }
 
 size_t enc_object_get_meta_size(enc_object obj) {
