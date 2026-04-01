@@ -137,6 +137,12 @@ enc_store enc_store_open(const char* filename, char* key) {
 }
 
 void enc_store_close(enc_store store, char* key) {
+#ifdef ENABLE_MPI
+    int my_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    if (my_rank != 0) return;
+#endif
+
     // write cfg
     size_t offset = 0;
     lseek(store.root_file, 0, SEEK_SET);
@@ -241,7 +247,7 @@ static void write_grains_joined(enc_config cfg, char* name, int object_idx, enc_
     sprintf(grains_filename, "%d-g", object_idx);
 
     char* filename = append_path(name, grains_filename);
-    int file = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
+    int file = open(filename, O_RDWR | O_CREAT, 0644);
     free(grains_filename);
 
     enc_load_config(cfg);
@@ -266,6 +272,12 @@ static void write_grains_joined(enc_config cfg, char* name, int object_idx, enc_
 }
 
 void enc_store_grains_write(enc_store store, const char* tag, char* key) {
+#ifdef ENABLE_MPI
+    int my_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    if(my_rank != 0) return;
+#endif
+
     size_t obj_idx = get_object_idx(store, tag);
     enc_object_desc* obj = &store.objs[obj_idx];
     switch(obj->layout) {
@@ -392,53 +404,6 @@ static size_t write_to_grain(enc_store store, int obj_idx, int grain_idx,
     return local_remaining_size;
 }
 
-#ifdef ENABLE_MPI
-static void write_parallel(enc_store store, const char* tag, size_t offset, size_t size, const void* in_data, char* key) {
-    size_t obj_idx = get_object_idx(store, tag);
-    enc_object_desc* obj = store.objs + obj_idx;
-
-    size_t cur_offset = 0;
-    size_t remaining_size = size;
-
-    // rank to which io is assigned
-    int cur_rank = 0;
-    int my_rank, rank_count;
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &rank_count);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    for(int grain_idx = 0; grain_idx != obj->obj.grain_cnt; ++grain_idx) {
-        enc_grain_meta* cur_grain = obj->obj.grains + grain_idx;
-
-        // printf("W, candidate grain, offset %lu, size %lu\n", cur_offset, cur_grain->size);
-
-        // if grain doesn't overlap with io, continue
-        if(cur_offset + cur_grain->size <= offset || offset + size <= cur_offset) {
-            cur_offset += obj->obj.grains[grain_idx].size;
-            continue;
-        }
-
-        if(my_rank == cur_rank) {
-            size_t written = write_to_grain(store, obj_idx, grain_idx,
-                    offset, cur_offset, remaining_size, in_data, key);
-            remaining_size -= written;
-            if(remaining_size == 0) break;
-            in_data += written;
-        }
-        else {
-            if(cur_grain->size > remaining_size) break;
-            remaining_size -= cur_grain->size;
-            in_data += cur_grain->size;
-        }
-        ++cur_rank;
-
-
-        cur_offset += obj->obj.grains[grain_idx].size;
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-}
-#endif
-
 static void write_serial(enc_store store, const char* tag, size_t offset, size_t size, const void* in_data, char* key) {
     size_t obj_idx = get_object_idx(store, tag);
     enc_object_desc* obj = store.objs + obj_idx;
@@ -470,11 +435,7 @@ static void write_serial(enc_store store, const char* tag, size_t offset, size_t
 
 void enc_store_write(enc_store store, const char* tag, size_t offset, size_t size, const void* in_data, char* key) {
     if(size == 0) return;
-#ifdef ENABLE_MPI
-    write_parallel(store, tag, offset, size, in_data, key);
-#else
     write_serial(store, tag, offset, size, in_data, key);
-#endif
 }
 
 static size_t read_from_grain(enc_store store, int obj_idx, int grain_idx,

@@ -47,3 +47,18 @@ pushd "nettle-3.10.2" > /dev/null
 ./configure --prefix=${INSTALL_DIR}/nettle-ins
 make -j`nproc` && make install
 popd > /dev/null
+
+MPICC=$(which mpicc)
+if [[ -z ${MPICC} ]]; then
+    git clone git@github.com:pmodels/mpich.git
+    pushd mpich
+        git submodule update --init
+        ./autogen.sh
+        ./configure --prefix=${DEP_DIR}/mpich-ins
+        make -j`nproc` && make install
+    popd
+else
+    echo "Found mpicc at \"${MPICC}\", skipping install"
+fi
+
+popd
