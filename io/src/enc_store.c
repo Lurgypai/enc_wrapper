@@ -344,9 +344,8 @@ void enc_store_grains_read(enc_store store, const char* tag, char* key) {
     }
 
 #ifdef ENABLE_MPI
-    } else {
-        MPI_Bcast(obj, sizeof(enc_object_desc), MPI_BYTE, 0, MPI_COMM_WORLD);
     }
+    MPI_Bcast(obj, sizeof(enc_object_desc), MPI_BYTE, 0, MPI_COMM_WORLD);
 #endif
 }
 
