@@ -87,6 +87,12 @@ enc_store enc_store_open(const char* filename, char* key) {
         .objs = NULL
     };
 
+#ifdef ENABLE_MPI
+    int my_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    if(my_rank == 0) {
+#endif
+
     // open file
     char* root_file_name = append_path(filename, "root");
     store.root_file = open(root_file_name, O_RDWR, 0644);
@@ -132,6 +138,11 @@ enc_store enc_store_open(const char* filename, char* key) {
     }
 
     free(blob_mem);
+
+#ifdef ENABLE_MPI
+    }
+    MPI_Bcast(&store, sizeof(store), MPI_BYTE, 0, MPI_COMM_WORLD);
+#endif
 
     return store;
 }
@@ -319,11 +330,24 @@ static void read_grains_joined(enc_config cfg, const char* name, int object_idx,
 void enc_store_grains_read(enc_store store, const char* tag, char* key) {
     size_t obj_idx = get_object_idx(store, tag);
     enc_object_desc* obj = &store.objs[obj_idx];
+
+#ifdef ENABLE_MPI
+    int my_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    if(my_rank == 0) {
+#endif
+
     switch(obj->layout) {
         case enc_object_layout_joined:
             read_grains_joined(store.cfg, store.name, obj_idx, obj->obj, key);
             break;
     }
+
+#ifdef ENABLE_MPI
+    } else {
+        MPI_Bcast(obj, sizeof(enc_object_desc), MPI_BYTE, 0, MPI_COMM_WORLD);
+    }
+#endif
 }
 
 static void map_grain(enc_store store, int obj_idx, int grain_idx, void** data_out, int* file_out) {
