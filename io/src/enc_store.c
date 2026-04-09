@@ -141,7 +141,34 @@ enc_store enc_store_open(const char* filename, char* key) {
 
 #ifdef ENABLE_MPI
     }
+    // basic store metadata
     MPI_Bcast(&store, sizeof(store), MPI_BYTE, 0, MPI_COMM_WORLD);
+
+    // alocate space for objects
+    size_t objs_size = sizeof(enc_object_desc) * store.obj_cnt;
+    if(my_rank != 0) {
+        store.name = strdup(filename);
+        store.objs = malloc(objs_size);
+    }
+
+    // retrieve basic object meta
+    MPI_Bcast(store.objs, objs_size, MPI_BYTE, 0, MPI_COMM_WORLD);
+
+    // allocate space for grains and tag
+    if(my_rank != 0) {
+        for(int obj_idx = 0; obj_idx != store.obj_cnt; ++obj_idx) {
+            enc_object* obj = &store.objs[obj_idx].obj;
+            obj->grains = malloc(obj->grain_cnt * sizeof(enc_grain_meta));
+            obj->tag = malloc(obj->tag_size + 1);
+        }
+    }
+
+    // set tags
+    for(int obj_idx = 0; obj_idx != store.obj_cnt; ++obj_idx) {
+        enc_object* obj = &store.objs[obj_idx].obj;
+        MPI_Bcast(obj->tag, obj->tag_size, MPI_BYTE, 0, MPI_COMM_WORLD);
+        obj->tag[obj->tag_size] = '\0';
+    }
 #endif
 
     return store;
@@ -345,7 +372,7 @@ void enc_store_grains_read(enc_store store, const char* tag, char* key) {
 
 #ifdef ENABLE_MPI
     }
-    MPI_Bcast(obj, sizeof(enc_object_desc), MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(obj->obj.grains, obj->obj.grain_cnt * sizeof(enc_grain_meta), MPI_BYTE, 0, MPI_COMM_WORLD);
 #endif
 }
 
