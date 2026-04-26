@@ -3,10 +3,20 @@
 #include <string.h>
 #include "enc_object.h"
 
+typedef struct enc_store_grain_index_desc_ {
+    size_t offset;
+    size_t size;
+} enc_store_grain_index_desc;
+
+typedef struct enc_store_grain_index_ {
+} enc_store_grain_index;
+
 typedef enum enc_object_layout_ {
     enc_object_layout_joined,
     // enc_object_layout_split
 } enc_object_layout;
+
+// add the grain index
 
 typedef struct enc_object_desc_ {
     enc_object obj;
