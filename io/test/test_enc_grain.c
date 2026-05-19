@@ -24,7 +24,8 @@ int test_enc_grain_write() {
     char* key = enc_make_key();
     enc_close();
 
-    enc_grain_write(meta.cfg, meta, meta_store, data_mem, data_store, key);
+    enc_grain_meta_write(meta.cfg, meta, meta_store, key);
+    enc_grain_data_write(meta, data_store, data_mem, key);
     free(key);
 
     free(data_store);
@@ -90,7 +91,8 @@ int test_enc_grain_meta_read() {
     char* key = enc_make_key();
     enc_close();
 
-    enc_grain_write(meta.cfg, meta, meta_store, data_mem, data_store, key);
+    enc_grain_meta_write(meta.cfg, meta, meta_store, key);
+    enc_grain_data_write(meta, data_store, data_mem, key);
 
     free(data_store);
 
@@ -126,7 +128,8 @@ int test_enc_grain_data_read() {
     char* key = enc_make_key();
     enc_close();
 
-    enc_grain_write(meta.cfg, meta, meta_store, data_mem, data_store, key);
+    enc_grain_meta_write(meta.cfg, meta, meta_store, key);
+    enc_grain_data_write(meta, data_store, data_mem, key);
 
     free(meta_store);
 

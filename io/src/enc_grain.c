@@ -72,9 +72,3 @@ void enc_grain_data_write(enc_grain_meta meta, void* data_store, void* data_mem,
 
     enc_close();
 }
-
-void enc_grain_write(enc_config meta_cfg, enc_grain_meta meta, void* meta_store, void* data_mem, void* data_store, char* key) {
-    enc_grain_meta_write(meta_cfg, meta, meta_store, key);
-    enc_grain_data_write(meta, data_store, data_mem, key);
-}
-

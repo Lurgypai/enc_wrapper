@@ -18,17 +18,19 @@ typedef struct enc_grain_index_desc_ {
 } enc_grain_index_desc;
 
 typedef struct enc_grain_index_ {
-    enc_grain_index_desc* grains;
     size_t cnt;
     size_t reserved;
+    enc_grain_index_desc* grains;
 } enc_grain_index;
 
-enc_grain_index make_enc_grain_index();
-void free_enc_grain_index(enc_grain_index* idx);
+enc_grain_index enc_grain_index_make();
+void enc_grain_index_free(enc_grain_index* idx);
 
 void enc_grain_index_add_grain(enc_grain_index* idx, int id, size_t offset, size_t size);
 
 // selects grains that overlap with input selection
 void enc_grain_index_select_grains(enc_grain_index* idx, size_t offset, size_t size, size_t** ids, size_t* id_cnt);
 
-
+size_t enc_grain_index_get_size(enc_grain_index* idx);
+void enc_grain_index_put(enc_grain_index* idx, void* store);
+void enc_grain_index_parse(enc_grain_index* idx, void* store);
