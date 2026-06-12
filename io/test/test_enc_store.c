@@ -33,20 +33,20 @@ int main(int argc, char** argv) {
     enc_store_add_object(&store, "three_grains_2", enc_object_layout_joined);
 
     enc_object* obj_single = enc_store_get_object(store, "single_grain");
-    enc_object_add_grain(obj_single, grain_template);
+    enc_store_add_grain(&store, "single_grain", grain_template);
 
     enc_object* obj_three_1 = enc_store_get_object(store, "three_grains_1");
-    enc_object_add_grain(obj_three_1, grain_template);
-    enc_object_add_grain(obj_three_1, grain_template);
-    enc_object_add_grain(obj_three_1, grain_template);
+    enc_store_add_grain(&store, "three_grains_1", grain_template);
+    enc_store_add_grain(&store, "three_grains_1", grain_template);
+    enc_store_add_grain(&store, "three_grains_1", grain_template);
 
     enc_object* obj_three_2 = enc_store_get_object(store, "three_grains_2");
-    enc_object_add_grain(obj_three_2, grain_template);
-    enc_object_add_grain(obj_three_2, grain_template);
-    enc_object_add_grain(obj_three_2, grain_template);
+    enc_store_add_grain(&store, "three_grains_2", grain_template);
+    enc_store_add_grain(&store, "three_grains_2", grain_template);
+    enc_store_add_grain(&store, "three_grains_2", grain_template);
 
     // aligned io on single
-    enc_store_grains_write(&store, "single_grain", meta_cfg, &grain_template, key);
+    enc_store_grains_write(&store, "single_grain", key);
     enc_store_write(store, "single_grain", 0, REGION_SIZE, data_in, key);
     enc_store_index_write(store, "single_grain", key);
 
@@ -57,12 +57,12 @@ int main(int argc, char** argv) {
     };
 
     // aligned io in between grains
-    enc_store_grains_write(&store, "three_grains_1", meta_cfg, grains, key);
+    enc_store_grains_write(&store, "three_grains_1", key);
     enc_store_write(store, "three_grains_1", REGION_SIZE, REGION_SIZE, data_in, key);
     enc_store_index_write(store, "three_grains_1", key);
 
     // unaligned io
-    enc_store_grains_write(&store, "three_grains_2", meta_cfg, grains, key);
+    enc_store_grains_write(&store, "three_grains_2", key);
     enc_store_write(store, "three_grains_2", REGION_SIZE / 2, REGION_SIZE, data_in, key);
     enc_store_index_write(store, "three_grains_2", key);
 

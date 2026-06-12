@@ -125,15 +125,19 @@ enc_store enc_store_open(const char* filename, char* key) {
 
     store.objs = malloc(sizeof(enc_object_desc) * store.obj_cnt);
     for(int obj_idx = 0; obj_idx != store.obj_cnt; ++obj_idx) {
-        enc_object* obj = &store.objs[obj_idx].obj;
+        enc_object_desc* desc = &store.objs[obj_idx];
+        enc_object* obj = &desc->obj;
         // parse object meta
         enc_object_parse_meta(obj, blob_mem + offset);
         offset += enc_object_get_meta_size(*obj);
-        memcpy(&store.objs[obj_idx].layout, blob_mem + offset, sizeof(enc_object_layout));
+        memcpy(&desc->layout, blob_mem + offset, sizeof(enc_object_layout));
         offset += sizeof(enc_object_layout);
 
         // allocate empty idex
         obj->idx = enc_grain_index_make();
+        // empty grains
+        // TODO: for a pattern that writes to the grains after launch, this will need to be fixed
+        desc->grains = NULL;
     }
 
     free(blob_mem);
@@ -203,6 +207,8 @@ void enc_store_close(enc_store store, char* key) {
         obj_blob_size += sizeof(enc_object_layout);
         // free object
         enc_object_free(&store.objs[obj_idx].obj);
+        if(store.objs[obj_idx].layout == enc_object_layout_joined &&
+                store.objs[obj_idx].grains != NULL) free(store.objs[obj_idx].grains);
     }
 
     enc_load_config(store.cfg);
@@ -249,6 +255,8 @@ void enc_store_add_object(enc_store* store, const char* tag, enc_object_layout l
 
     store->objs[pos].obj = enc_object_make(tag);
     store->objs[pos].layout = layout;
+    store->objs[pos].reserved = 0;
+    store->objs[pos].grains = NULL;
 }
 
 static size_t get_object_idx(enc_store store, const char* tag) {
@@ -273,11 +281,29 @@ enc_object* enc_store_get_object(enc_store store, const char* tag) {
     return &store.objs[obj_idx].obj;
 }
 
-static void write_index_joined(enc_config cfg, char* name, int object_idx, enc_object obj, char* key) {
-    // get filename
-    // generate meta blob
-    // mmap and encrypt into
-    // 10 digit integer + "-g\0"
+void enc_store_add_grain(enc_store* store, const char* tag, enc_grain_meta grain) {
+    size_t obj_idx = get_object_idx(*store, tag);
+    enc_object_desc* desc = &store->objs[obj_idx];
+    enc_object* obj = &desc->obj;
+
+    enc_object_add_grain(obj, grain);
+    switch(desc->layout) {
+        case enc_object_layout_joined:
+            if(desc->reserved == 0) {
+                desc->reserved = 1;
+                desc->grains = malloc(sizeof(enc_grain_meta));
+            }
+            else if (obj->grain_cnt > desc->reserved) {
+                desc->reserved *= 2;
+                desc->grains = realloc(desc->grains, sizeof(enc_grain_meta) * desc->reserved);
+            }
+            size_t grain_idx = obj->grain_cnt - 1;
+            desc->grains[grain_idx].cfg = grain.cfg;
+            desc->grains[grain_idx].size = grain.size;
+            break;
+        case enc_object_layout_split:
+            break;
+    }
 }
 
 void enc_store_index_write(enc_store store, const char* tag, char* key) {
@@ -406,7 +432,7 @@ static void write_grains_joined(enc_store* store, size_t object_idx, enc_object*
     free(filename);
 }
 
-void enc_store_grains_write(enc_store* store, const char* tag, enc_config meta_cfg, enc_grain_meta* grains, char* key) {
+void enc_store_grains_write(enc_store* store, const char* tag, char* key) {
 #ifdef ENABLE_MPI
     int my_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -417,7 +443,7 @@ void enc_store_grains_write(enc_store* store, const char* tag, enc_config meta_c
 
     switch(obj->layout) {
         case enc_object_layout_joined:
-            write_grains_joined(store, object_idx, &obj->obj, meta_cfg, grains, key);
+            write_grains_joined(store, object_idx, &obj->obj, store->cfg, obj->grains, key);
             break;
         case enc_object_layout_split:
             break;
