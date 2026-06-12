@@ -15,6 +15,8 @@ typedef struct enc_grain_index_desc_ {
     size_t offset;
     // size in "file"
     size_t size;
+    // padding will result in better performance for now, and most block sizes are 32 anyway
+    char padding[4];
 } enc_grain_index_desc;
 
 typedef struct enc_grain_index_ {

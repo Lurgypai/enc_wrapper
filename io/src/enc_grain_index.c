@@ -2,6 +2,9 @@
 
 #include <stdlib.h>
 
+// DEBUG
+#include <stdio.h>
+
 enc_grain_index enc_grain_index_make() {
     enc_grain_index idx = {
         .grains = NULL,

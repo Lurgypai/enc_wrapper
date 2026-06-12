@@ -7,6 +7,7 @@ enc_object enc_object_make(const char* tag) {
     obj.tag = strdup(tag);
     obj.tag_size = strlen(tag);
     obj.grain_cnt = 0;
+    obj.cur_grain_offset = 0;
     obj.idx = enc_grain_index_make();
     return obj;
 }

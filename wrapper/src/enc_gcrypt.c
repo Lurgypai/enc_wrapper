@@ -49,7 +49,8 @@ static int gcrypt_set_nonce(char* nonce, size_t nonce_len) {
 
 static int gcrypt_encrypt(void* source, size_t source_len, void* dest, size_t dest_len, size_t blk_len) {
     if(source_len % blk_len != 0 || dest_len % blk_len != 0) {
-        fprintf(stderr, "ERROR: encrypt, source or destination sizes are not divisible by block size\n");
+        fprintf(stderr, "ERROR: encrypt, source (%lu) or destination (%lu) sizes are not divisible by block size (%lu)\n",
+                source_len, dest_len, blk_len);
     }
 
     print_gcrypt_err(gcry_cipher_encrypt(handle, dest, dest_len, source, source_len));
@@ -58,7 +59,8 @@ static int gcrypt_encrypt(void* source, size_t source_len, void* dest, size_t de
 
 static int gcrypt_decrypt(void* source, size_t source_len, void* dest, size_t dest_len, size_t blk_len) {
     if(source_len % blk_len != 0 || dest_len % blk_len != 0) {
-        fprintf(stderr, "ERROR: decrypt, source or destination sizes are not divisible by block size\n");
+        fprintf(stderr, "ERROR: encrypt, source (%lu) or destination (%lu) sizes are not divisible by block size (%lu)\n",
+                source_len, dest_len, blk_len);
     }
 
     gcry_cipher_decrypt(handle, dest, dest_len, source, source_len);

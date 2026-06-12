@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// DEBUG
+#include <stdio.h>
+
 static void read_and_set_nonce(void* buf, char** buf_out, size_t* size_out) {
     *size_out = enc_get_nonce_size();
     *buf_out = malloc(*size_out);
@@ -41,6 +44,7 @@ void enc_grain_data_read(enc_grain_meta meta, void* data_store, void* data_mem, 
     enc_decrypt(data_store + nonce_size, meta.size, data_mem, meta.size);
 
     free(nonce);
+
 }
 
 void enc_grain_meta_write(enc_config meta_cfg, enc_grain_meta meta, void* meta_store, char* key) {

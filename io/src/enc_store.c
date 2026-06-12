@@ -278,33 +278,6 @@ static void write_index_joined(enc_config cfg, char* name, int object_idx, enc_o
     // generate meta blob
     // mmap and encrypt into
     // 10 digit integer + "-g\0"
-    char* grains_filename = malloc(10 + 3);
-    grains_filename[0] = '\0';
-    sprintf(grains_filename, "%d-g", object_idx);
-
-    char* filename = append_path(name, grains_filename);
-    int file = open(filename, O_RDWR | O_CREAT, 0644);
-    free(grains_filename);
-
-    enc_load_config(cfg);
-    enc_set_key(key, enc_get_key_size());
-
-    size_t blob_size = sizeof(enc_grain_index_desc) * obj.grain_cnt;
-    size_t encrypted_size = enc_get_encrypted_size(cfg, blob_size);
-
-    ftruncate(file, encrypted_size);
-
-    void* dest = mmap_unaligned(file, encrypted_size, 0);
-
-    size_t nonce_size = enc_get_nonce_size();
-    char* nonce = enc_make_nonce();
-    enc_set_nonce(nonce, enc_get_nonce_size());
-    memcpy(dest, nonce, nonce_size);
-    enc_encrypt(obj.idx.grains, blob_size, dest + nonce_size, blob_size);
-
-    free(nonce);
-    munmap_unaligned(dest, encrypted_size, 0);
-    free(filename);
 }
 
 void enc_store_index_write(enc_store store, const char* tag, char* key) {
@@ -314,29 +287,65 @@ void enc_store_index_write(enc_store store, const char* tag, char* key) {
     if(my_rank != 0) return;
 #endif
 
-    size_t obj_idx = get_object_idx(store, tag);
-    enc_object_desc* obj = &store.objs[obj_idx];
-    switch(obj->layout) {
-        case enc_object_layout_joined:
-            write_index_joined(store.cfg, store.name, obj_idx, obj->obj, key);
-            break;
-    }
-}
+    size_t object_idx = get_object_idx(store, tag);
+    enc_object_desc* obj = &store.objs[object_idx];
 
-static void read_index_joined(enc_config cfg, const char* name, int object_idx, enc_object obj, char* key) {
-    char* grains_filename = malloc(10 + 3);
-    grains_filename[0] = '\0';
-    sprintf(grains_filename, "%d-g", object_idx);
+    char* index_filename = malloc(10 + 3);
+    index_filename[0] = '\0';
+    sprintf(index_filename, "%lu-i", object_idx);
 
-    char * filename = append_path(name, grains_filename);
-    int file = open(filename, O_RDWR, 0644);
-    free(grains_filename);
+    char* filename = append_path(store.name, index_filename);
+    int file = open(filename, O_RDWR | O_CREAT, 0644);
+    free(index_filename);
 
-    enc_load_config(cfg);
+    enc_load_config(store.cfg);
     enc_set_key(key, enc_get_key_size());
 
-    size_t blob_size = sizeof(enc_grain_index_desc) * obj.grain_cnt;
-    size_t encrypted_size = enc_get_encrypted_size(cfg, blob_size);
+    size_t blob_size = sizeof(enc_grain_index_desc) * obj->obj.grain_cnt;
+    size_t encrypted_size = enc_get_encrypted_size(store.cfg, blob_size);
+
+    ftruncate(file, encrypted_size);
+
+    void* dest = mmap_unaligned(file, encrypted_size, 0);
+
+    size_t nonce_size = enc_get_nonce_size();
+    char* nonce = enc_make_nonce();
+    enc_set_nonce(nonce, enc_get_nonce_size());
+    memcpy(dest, nonce, nonce_size);
+
+    enc_encrypt(obj->obj.idx.grains, blob_size, dest + nonce_size, blob_size);
+
+    free(nonce);
+    munmap_unaligned(dest, encrypted_size, 0);
+    free(filename);
+}
+
+void enc_store_index_read(enc_store store, const char* tag, char* key) {
+    size_t object_idx = get_object_idx(store, tag);
+    enc_object_desc* obj = &store.objs[object_idx];
+
+#ifdef ENABLE_MPI
+    int my_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    if(my_rank == 0) {
+#endif
+
+    char* index_filename = malloc(10 + 3);
+    index_filename[0] = '\0';
+    sprintf(index_filename, "%lu-i", object_idx);
+
+    char * filename = append_path(store.name, index_filename);
+    int file = open(filename, O_RDWR, 0644);
+    free(index_filename);
+
+    enc_load_config(store.cfg);
+    enc_set_key(key, enc_get_key_size());
+
+    size_t blob_size = sizeof(enc_grain_index_desc) * obj->obj.grain_cnt;
+    obj->obj.idx.cnt = obj->obj.grain_cnt;
+    obj->obj.idx.grains = malloc(blob_size);
+    obj->obj.idx.reserved = obj->obj.grain_cnt;
+    size_t encrypted_size = enc_get_encrypted_size(store.cfg, blob_size);
 
     void* src = mmap_unaligned(file, encrypted_size, 0);
 
@@ -345,34 +354,11 @@ static void read_index_joined(enc_config cfg, const char* name, int object_idx, 
     memcpy(nonce, src, nonce_size);
     enc_set_nonce(nonce, nonce_size);
 
-    enc_decrypt(src + nonce_size, blob_size, obj.idx.grains, blob_size);
-
-    // generate index
-    size_t cur_offset;
-    for(int grain_idx = 0; grain_idx != obj.grain_cnt; ++grain_idx) {
-        // enc_grain_index_add_grain(&obj.idx, grain_idx, cur_offset, obj.grains[grain_idx].size);
-    } 
+    enc_decrypt(src + nonce_size, blob_size, obj->obj.idx.grains, blob_size);
 
     free(nonce);
     munmap_unaligned(src, encrypted_size, 0);
     free(filename);
-}
-
-void enc_store_index_read(enc_store store, const char* tag, char* key) {
-    size_t obj_idx = get_object_idx(store, tag);
-    enc_object_desc* obj = &store.objs[obj_idx];
-
-#ifdef ENABLE_MPI
-    int my_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-    if(my_rank == 0) {
-#endif
-
-    switch(obj->layout) {
-        case enc_object_layout_joined:
-            read_index_joined(store.cfg, store.name, obj_idx, obj->obj, key);
-            break;
-    }
 
 #ifdef ENABLE_MPI
     }
@@ -385,7 +371,60 @@ void enc_store_index_read(enc_store store, const char* tag, char* key) {
 #endif
 }
 
-static void map_grain(enc_store store, int obj_idx, int grain_idx, enc_grain_meta grain, void** data_out, int* file_out) {
+static void write_grains_joined(enc_store* store, size_t object_idx, enc_object* obj, enc_config meta_cfg, enc_grain_meta* grains, char* key) {
+#ifdef ENABLE_MPI
+    int my_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    if(my_rank != 0) return;
+#endif
+    char* grains_filename = malloc(10 + 3);
+    grains_filename[0] = '\0';
+    sprintf(grains_filename, "%lu-g", object_idx);
+
+    char* filename = append_path(store->name, grains_filename);
+    int file = open(filename, O_RDWR | O_CREAT, 0644);
+    free(grains_filename);
+
+    enc_load_config(store->cfg);
+    enc_set_key(key, enc_get_key_size());
+
+    size_t blob_size = sizeof(enc_grain_meta) * obj->grain_cnt;
+    size_t encrypted_size = enc_get_encrypted_size(store->cfg, blob_size);
+
+    ftruncate(file, encrypted_size);
+
+    void* dest = mmap_unaligned(file, encrypted_size, 0);
+
+    size_t nonce_size = enc_get_nonce_size();
+    char* nonce = enc_make_nonce();
+    enc_set_nonce(nonce, enc_get_nonce_size());
+    memcpy(dest, nonce, nonce_size);
+    enc_encrypt(grains, blob_size, dest + nonce_size, blob_size);
+
+    free(nonce);
+    munmap_unaligned(dest, encrypted_size, 0);
+    free(filename);
+}
+
+void enc_store_grains_write(enc_store* store, const char* tag, enc_config meta_cfg, enc_grain_meta* grains, char* key) {
+#ifdef ENABLE_MPI
+    int my_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    if(my_rank != 0) return;
+#endif
+    size_t object_idx = get_object_idx(*store, tag);
+    enc_object_desc* obj = &store->objs[object_idx];
+
+    switch(obj->layout) {
+        case enc_object_layout_joined:
+            write_grains_joined(store, object_idx, &obj->obj, meta_cfg, grains, key);
+            break;
+        case enc_object_layout_split:
+            break;
+    }
+}
+
+static void map_grain(enc_store store, int obj_idx, int grain_idx, enc_grain_meta* grain, void** data_out, int* file_out) {
     enc_object_desc* obj = store.objs + obj_idx;
     // enc_grain_meta* grain = obj->obj.grains + grain_idx;
     // 10 digits per integer, - and null terminator
@@ -400,10 +439,10 @@ static void map_grain(enc_store store, int obj_idx, int grain_idx, enc_grain_met
         exit(1);
     }
 
-    // size_t encrypted_size = enc_get_encrypted_size(grain->cfg, grain->size);
-    // ftruncate(*file_out, encrypted_size);
+    size_t encrypted_size = enc_get_encrypted_size(grain->cfg, grain->size);
+    ftruncate(*file_out, encrypted_size);
 
-    // *data_out = mmap(NULL, encrypted_size, PROT_READ | PROT_WRITE, MAP_SHARED, *file_out, 0);
+    *data_out = mmap(NULL, encrypted_size, PROT_READ | PROT_WRITE, MAP_SHARED, *file_out, 0);
     if(*data_out == MAP_FAILED) {
         perror("FAILED TO MAP GRAIN");
         exit(1);
@@ -423,11 +462,10 @@ static void unmap_grain(enc_store store, int obj_idx, int grain_idx, void* data,
 
 // returns local io size
 // in_data has to be the data we want to write to this grain
-static size_t write_to_grain(enc_store store, int obj_idx, int grain_idx,
+static size_t write_to_grain(enc_store store, int obj_idx, int grain_idx, enc_grain_meta* grain,
                             size_t offset, size_t grain_offset, size_t remaining_size,
                             const void* in_data, char* key) {
     enc_object* obj = &store.objs[obj_idx].obj;
-    enc_grain_meta* grain = &obj->grains[grain_idx];
     // offset into grain
     // if the offset is before this grain, write at start of grain
     // else set to how far into the grain the offset is
@@ -445,7 +483,7 @@ static size_t write_to_grain(enc_store store, int obj_idx, int grain_idx,
 
     void* data_store = NULL;
     int file = 0;
-    map_grain(store, obj_idx, grain_idx, &data_store, &file);
+    map_grain(store, obj_idx, grain_idx, grain, &data_store, &file);
 
     // cast away the const to silence errors.
     // we don't modify this, but we might replace it, and need to free it
@@ -453,7 +491,7 @@ static size_t write_to_grain(enc_store store, int obj_idx, int grain_idx,
     int unaligned = local_offset != 0 || local_remaining_size != grain->size;
     if(unaligned) {
             data = malloc(grain->size);
-            enc_object_grain_data_read(*obj, grain_idx, key, data, data_store);
+            enc_object_grain_read(*obj, *grain, data, data_store, key);
             memcpy(data + local_offset, in_data, local_remaining_size);
     }
 
@@ -466,11 +504,10 @@ static size_t write_to_grain(enc_store store, int obj_idx, int grain_idx,
 }
 
 
-static size_t read_from_grain(enc_store store, int obj_idx, int grain_idx,
+static size_t read_from_grain(enc_store store, int obj_idx, int grain_idx, enc_grain_meta* grain,
                             size_t offset, size_t grain_offset, size_t remaining_size,
                             void* out_data, char* key) {
     enc_object* obj = &store.objs[obj_idx].obj;
-    enc_grain_meta* grain = &obj->grains[grain_idx];
     size_t local_offset = offset < grain_offset ? 0 : offset - grain_offset;
     size_t local_remaining_size = remaining_size < grain->size - local_offset ?
         remaining_size : grain->size - local_offset;
@@ -483,7 +520,7 @@ static size_t read_from_grain(enc_store store, int obj_idx, int grain_idx,
 
     void* data_store = NULL;
     int file = 0;
-    map_grain(store, obj_idx, grain_idx, &data_store, &file);
+    map_grain(store, obj_idx, grain_idx, grain, &data_store, &file);
     int unaligned = local_offset != 0 || local_remaining_size != grain->size;
 
     if(unaligned) {
@@ -501,6 +538,58 @@ static size_t read_from_grain(enc_store store, int obj_idx, int grain_idx,
     return local_remaining_size;
 }
 
+static enc_grain_meta read_grain_meta_joined(enc_store* store, size_t obj_idx, enc_object* obj, size_t grain_idx, char* key) {
+    char* index_filename = malloc(10 + 3);
+    index_filename[0] = '\0';
+    sprintf(index_filename, "%lu-g", obj_idx);
+
+    char * filename = append_path(store->name, index_filename);
+    int file = open(filename, O_RDWR, 0644);
+    free(index_filename);
+
+    enc_load_config(store->cfg);
+    enc_set_key(key, enc_get_key_size());
+
+    size_t blob_size = sizeof(enc_grain_meta) * obj->grain_cnt;
+    enc_grain_meta* grains = malloc(blob_size);
+    size_t encrypted_size = enc_get_encrypted_size(store->cfg, blob_size);
+
+    void* src = mmap_unaligned(file, encrypted_size, 0);
+
+    size_t nonce_size = enc_get_nonce_size();
+    char* nonce = malloc(nonce_size);
+    memcpy(nonce, src, nonce_size);
+    enc_set_nonce(nonce, nonce_size);
+
+    enc_decrypt(src + nonce_size, blob_size, grains, blob_size);
+
+    free(nonce);
+    munmap_unaligned(src, encrypted_size, 0);
+    free(filename);
+
+    enc_grain_meta grain;
+    memcpy(&grain, grains + grain_idx, sizeof(grain));
+    free(grains);
+
+    return grain;
+}
+
+// TODO
+// complete
+static enc_grain_meta read_grain_meta_split(enc_store* store, size_t obj_idx, enc_object* obj, size_t grain_idx, char* key) {
+    enc_grain_meta ret;
+    return ret;
+}
+
+static enc_grain_meta read_grain_meta(enc_store* store, enc_object_layout layout, size_t obj_idx, enc_object* obj, size_t grain_idx, char* key) {
+    switch(layout) {
+        case enc_object_layout_joined:
+            return read_grain_meta_joined(store, obj_idx, obj, grain_idx, key);
+        case enc_object_layout_split:
+            return read_grain_meta_split(store, obj_idx, obj, grain_idx, key);
+    }
+}
+
 
 void do_io(int io_dir, enc_store store, const char* tag, size_t offset, size_t size, void* data, char* key) {
     if(size == 0) return;
@@ -515,14 +604,16 @@ void do_io(int io_dir, enc_store store, const char* tag, size_t offset, size_t s
 
     for(int selected_grain_idx = 0; selected_grain_idx != selected_grains_size; ++selected_grain_idx) {
         int grain_idx = selected_grains[selected_grain_idx];
-        enc_grain_meta* cur_grain = obj->obj.grains + grain_idx;
+        // read grain meta
+         enc_grain_meta cur_grain = read_grain_meta(&store, obj->layout, obj_idx, &obj->obj, grain_idx, key);
 
+        // perform io
         size_t io_performed = 0;
         if(io_dir == 0) {
-            io_performed = write_to_grain(store, obj_idx, grain_idx,
+            io_performed = write_to_grain(store, obj_idx, grain_idx, &cur_grain,
                     offset, obj->obj.idx.grains[grain_idx].offset, remaining_size, data, key);
         } else if (io_dir == 1) {
-            io_performed = read_from_grain(store, obj_idx, grain_idx,
+            io_performed = read_from_grain(store, obj_idx, grain_idx, &cur_grain,
                     offset, obj->obj.idx.grains[grain_idx].offset, remaining_size, data, key);
         }
 

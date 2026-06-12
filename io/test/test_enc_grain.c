@@ -157,9 +157,9 @@ int test_enc_grain_data_read() {
 int main(int argc, char** argv) {
 
     printf("test_enc_grain_write: %d\n", test_enc_grain_write());
-    // printf("test_enc_grain_meta_read: %d\n", test_enc_grain_meta_read());
-    // printf("test_enc_grain_data_read: %d\n", test_enc_grain_data_read());
-    // printf("test_enc_grain_data_write_and_read: %d\n", test_enc_grain_data_write_and_read());
+    printf("test_enc_grain_meta_read: %d\n", test_enc_grain_meta_read());
+    printf("test_enc_grain_data_read: %d\n", test_enc_grain_data_read());
+    printf("test_enc_grain_data_write_and_read: %d\n", test_enc_grain_data_write_and_read());
 
     return 0;
 }
