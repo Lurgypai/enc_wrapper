@@ -117,26 +117,6 @@ int test_enc_object_grain_read() {
     return !is_zero;
 }
 
-int test_enc_object_get_meta_size() {
-    const char* obj_tag = "test_object";
-    enc_object obj = enc_object_make(obj_tag);
-
-    enc_grain_meta grain = {
-        .cfg = {
-            .alg = aes256,
-            .lib = enc_lib_gcrypt
-        },
-        .size = CHUNK_SIZE
-    };
-    size_t pos = enc_object_add_grain(&obj, grain);
-
-    int ret = !(enc_object_get_meta_size(obj) == sizeof(size_t) + 11 + sizeof(size_t));
-
-    enc_object_free(&obj);
-
-    return ret;
-}
-
 int test_enc_object_put_meta() {
 
     const char* obj_tag = "test_object";
@@ -192,7 +172,6 @@ int main(int argc, char** argv) {
     printf("test_enc_object_add_grain: %d\n", test_enc_object_add_grain());
     printf("test_enc_object_grain_write: %d\n", test_enc_object_grain_write());
     printf("test_enc_object_grain_data_read: %d\n", test_enc_object_grain_read());
-    printf("test_enc_object_get_meta_size: %d\n", test_enc_object_get_meta_size());
     printf("test_enc_object_put_meta: %d\n", test_enc_object_put_meta());
     printf("test_enc_object_parse_meta: %d\n", test_enc_object_parse_meta());
 

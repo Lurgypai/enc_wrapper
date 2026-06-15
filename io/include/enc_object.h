@@ -27,7 +27,7 @@ typedef struct enc_object_ {
     char* tag;
     size_t tag_size;
     size_t grain_cnt;
-    // offset the next grain will be added at
+    // offset the next grain will be added at, also the size of the object in bytes
     size_t cur_grain_offset;
 
     enc_grain_index idx;
