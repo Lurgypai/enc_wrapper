@@ -13,11 +13,11 @@ static int dummy_decrypt(void* source, size_t source_len, void* dest, size_t des
     return 0;
 }
 
-static char* dummy_make_key() {
+static char* dummy_make_key(size_t key_size) {
     return malloc(1);
 }
 
-static char* dummy_make_nonce() {
+static char* dummy_make_nonce(size_t nonce_size) {
     return malloc(1);
 }
 
