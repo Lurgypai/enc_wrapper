@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <mpi.h>
+
+#include "enc_init.h"
 #include "enc_store.h"
 #include "enc_wrapper.h"
 
@@ -8,6 +11,9 @@
 #define REGION_SIZE 4096
 
 int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
+    enc_init();
+
     enc_config meta_cfg = {
         .alg = aes256,
         .lib = enc_lib_gcrypt
@@ -46,24 +52,24 @@ int main(int argc, char** argv) {
     enc_store_add_grain(&store, "three_grains_2", grain_template, key);
 
     // aligned io on single
-    enc_store_write(store, "single_grain", 0, REGION_SIZE, data_in, key);
-    enc_store_index_write(store, "single_grain", key);
+    enc_store_write(&store, "single_grain", 0, REGION_SIZE, data_in, key);
+    enc_store_index_write(&store, "single_grain", key);
 
     // aligned io in between grains
-    enc_store_write(store, "three_grains_1", REGION_SIZE, REGION_SIZE, data_in, key);
-    enc_store_index_write(store, "three_grains_1", key);
+    enc_store_write(&store, "three_grains_1", REGION_SIZE, REGION_SIZE, data_in, key);
+    enc_store_index_write(&store, "three_grains_1", key);
 
     // unaligned io
-    enc_store_write(store, "three_grains_2", REGION_SIZE / 2, REGION_SIZE, data_in, key);
-    enc_store_index_write(store, "three_grains_2", key);
+    enc_store_write(&store, "three_grains_2", REGION_SIZE / 2, REGION_SIZE, data_in, key);
+    enc_store_index_write(&store, "three_grains_2", key);
 
     enc_store_close(&store, key);
 
     store = enc_store_open("test.store", key);
 
     printf("Testing reading from single grain...\n");
-    enc_store_index_read(store, "single_grain", key);
-    enc_store_read(store, "single_grain", 0, REGION_SIZE, data_out, key);
+    enc_store_index_read(&store, "single_grain", key);
+    enc_store_read(&store, "single_grain", 0, REGION_SIZE, data_out, key);
     for(int i = 0; i != REGION_SIZE; ++i) {
         if(data_in[i] != data_out[i]) {
             printf("data written and read don't match at %d, %d != %d\n", i, data_in[i], data_out[i]);
@@ -75,8 +81,8 @@ int main(int argc, char** argv) {
     memset(data_out, 0, REGION_SIZE);
 
     printf("Testing reading from aligned grain...\n");
-    enc_store_index_read(store, "three_grains_1", key);
-    enc_store_read(store, "three_grains_1", REGION_SIZE, REGION_SIZE, data_out, key);
+    enc_store_index_read(&store, "three_grains_1", key);
+    enc_store_read(&store, "three_grains_1", REGION_SIZE, REGION_SIZE, data_out, key);
     for(int i = 0; i != REGION_SIZE; ++i) {
         if(data_in[i] != data_out[i]) {
             printf("data written and read don't match at %d, %d != %d\n", i, data_in[i], data_out[i]);
@@ -88,8 +94,8 @@ int main(int argc, char** argv) {
     memset(data_out, 0, REGION_SIZE);
 
     printf("Testing reading from unaligned grain...\n");
-    enc_store_index_read(store, "three_grains_2", key);
-    enc_store_read(store, "three_grains_2", REGION_SIZE / 2, REGION_SIZE, data_out, key);
+    enc_store_index_read(&store, "three_grains_2", key);
+    enc_store_read(&store, "three_grains_2", REGION_SIZE / 2, REGION_SIZE, data_out, key);
     for(int i = 0; i != REGION_SIZE; ++i) {
         if(data_in[i] != data_out[i]) {
             printf("data written and read don't match at %d, %d != %d\n", i, data_in[i], data_out[i]);

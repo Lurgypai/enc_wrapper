@@ -19,37 +19,24 @@ rm -r out
 mkdir out
 cd out
 
-CC=gcc
-CXX=g++
+MPICC=$(which mpicc)
+MPICXX=$(which mpicxx)
 
-# select compiler
-if [[ $ENABLE_MPI ]]; then
-    echo "MPI enabled"
-    MPICC=$(which mpicc)
-    MPICXX=$(which mpicxx)
-    if [[ -z $MPICC || -z $MPICC ]]; then
-        MPICC=${MPI_DIR}/bin/mpicc
-        MPICXX=${MPI_DIR}/bin/mpicxx
-
-        if [[ ! -f $MPICC || ! -f $MPICXX ]]; then
-            echo "MPI was not detected on the system, and not found in the $DEP_DIR"
-            exit 1
-        else
-            echo "Using MPI in ${DEP_DIR}, MPICC=$MPICC MPICXX=$MPICXX"
-        fi
+if [[ -z $MPICC || -z $MPICXX ]]; then
+    MPICC=${MPI_DIR}/bin/mpicc
+    MPICXX=${MPI_DIR}/bin/mpicxx
+    if [[ ! -f $MPICC || ! -f $MPICXX ]]; then
+        echo "MPI was not detected on the system, and not found in the $DEP_DIR"
+        exit 1
     else
-        echo "Using system MPI, MPICC=$MPICC, MPICXX=$MPICXX"
+        echo "Using MPI in ${DEP_DIR}, MPICC=$MPICC MPICXX=$MPICXX"
     fi
-
-    CC=$MPICC
-    CXX=$MPICXX
-    CFLAGS="-DENABLE_MPI"
 else
-    echo "MPI disabled"
+    echo "Using system MPI, MPICC=$MPICC, MPICXX=$MPICXX"
 fi
 
 cmake .. \
-    -DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} -DCMAKE_C_FLAGS=${CFLAGS} \
+    -DCMAKE_C_COMPILER=${MPICC} -DCMAKE_CXX_COMPILER=${MPICXX} -DCMAKE_C_FLAGS=${CFLAGS} \
     -Denc_wrapper_DIR=${WRAPPER_DIR}/cmake \
     -DCMAKE_INSTALL_PREFIX=${OUT_DIR} \
     -DCMAKE_BUILD_TYPE=Debug

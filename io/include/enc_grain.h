@@ -4,6 +4,8 @@
 
 #include "enc_config.h"
 
+#define INVALID_GRAIN_ID SIZE_MAX
+
 // metadata for a grain
 typedef struct enc_grain_meta_ {
     int64_t size;
