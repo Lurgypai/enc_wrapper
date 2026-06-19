@@ -38,6 +38,10 @@ enc_store enc_store_create(const char* filename, enc_config cfg) {
     mkdir(filename, 0777);
     char* root_file_name = append_path(filename, "root");
     store.root_file = open(root_file_name, O_RDWR | O_CREAT | O_TRUNC, 0644);
+    if(store.root_file < 0) {
+        perror("OPEN");
+        fprintf(stderr, "Filename: %s\n", root_file_name);
+    }
     free(root_file_name);
 
     if(store.root_file < 0) {
@@ -68,6 +72,10 @@ enc_store enc_store_open(const char* filename, char* key) {
         // open file
         char* root_file_name = append_path(filename, "root");
         store.root_file = open(root_file_name, O_RDWR, 0644);
+        if(store.root_file < 0) {
+            perror("OPEN");
+            fprintf(stderr, "Filename: %s\n", root_file_name);
+        }
         free(root_file_name);
 
         store.name = strdup(filename);
@@ -257,6 +265,10 @@ void enc_store_index_write(enc_store* store, const char* tag, char* key) {
 
     char* filename = append_path(store->name, index_filename);
     int file = open(filename, O_RDWR | O_CREAT, 0644);
+    if(file < 0) {
+        perror("OPEN");
+        fprintf(stderr, "Filename: %s\n", filename);
+    }
     free(index_filename);
 
     enc_load_config(store->cfg);
@@ -292,6 +304,10 @@ void enc_store_index_read(enc_store* store, const char* tag, char* key) {
 
         char * filename = append_path(store->name, index_filename);
         int file = open(filename, O_RDWR, 0644);
+        if(file < 0) {
+            perror("OPEN");
+            fprintf(stderr, "Filename: %s\n", filename);
+        }
         free(index_filename);
 
         enc_load_config(store->cfg);
@@ -578,6 +594,10 @@ static void cache_grains(enc_store* store, size_t obj_idx, char* key) {
 
     char * filename = append_path(store->name, index_filename);
     int file = open(filename, O_RDWR, 0644);
+    if(file < 0) {
+        perror("OPEN");
+        fprintf(stderr, "Filename: %s\n", filename);
+    }
     free(index_filename);
     free(filename);
 
@@ -616,6 +636,10 @@ static void write_joined_obj_grain_meta(enc_store* store, char* key) {
 
     char* filename = append_path(store->name, grains_filename);
     int file = open(filename, O_RDWR | O_CREAT, 0644);
+    if(file < 0) {
+        perror("OPEN");
+        fprintf(stderr, "Filename: %s\n", filename);
+    }
     free(grains_filename);
 
     enc_load_config(store->cfg);
