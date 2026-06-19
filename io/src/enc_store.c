@@ -40,6 +40,7 @@ enc_store enc_store_create(const char* filename, enc_config cfg) {
     store.root_file = open(root_file_name, O_RDWR | O_CREAT | O_TRUNC, 0644);
     if(store.root_file < 0) {
         perror("OPEN");
+        fprintf(stderr, "enc_store_create\n");
         fprintf(stderr, "Filename: %s\n", root_file_name);
     }
     free(root_file_name);
@@ -74,6 +75,7 @@ enc_store enc_store_open(const char* filename, char* key) {
         store.root_file = open(root_file_name, O_RDWR, 0644);
         if(store.root_file < 0) {
             perror("OPEN");
+            fprintf(stderr, "enc_store_open\n");
             fprintf(stderr, "Filename: %s\n", root_file_name);
         }
         free(root_file_name);
@@ -277,6 +279,7 @@ void enc_store_index_write(enc_store* store, const char* tag, char* key) {
     int file = open(filename, O_RDWR | O_CREAT, 0644);
     if(file < 0) {
         perror("OPEN");
+        fprintf(stderr, "enc_store_index_write\n");
         fprintf(stderr, "Filename: %s\n", filename);
     }
     free(index_filename);
@@ -317,6 +320,7 @@ void enc_store_index_read(enc_store* store, const char* tag, char* key) {
         if(file < 0) {
             perror("OPEN");
             fprintf(stderr, "Rank: %d\n", ENC_RANK_G);
+            fprintf(stderr, "enc_store_index_read\n");
             fprintf(stderr, "Filename: %s\n", filename);
         }
         free(index_filename);
