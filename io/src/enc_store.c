@@ -122,6 +122,16 @@ enc_store enc_store_open(const char* filename, char* key) {
     }
     // basic store metadata
     MPI_Bcast(&store, sizeof(store), MPI_BYTE, 0, MPI_COMM_WORLD);
+    size_t name_len = 0;
+    if(ENC_RANK_G == 0) {
+        name_len = strlen(store.name);
+    }
+    MPI_Bcast(&name_len, sizeof(name_len), MPI_BYTE, 0, MPI_COMM_WORLD);
+    if(ENC_RANK_G != 0) {
+        store.name = malloc(name_len + 1);
+        store.name[name_len] = '\0';
+    }
+    MPI_Bcast(store.name, name_len, MPI_BYTE, 0, MPI_COMM_WORLD);
 
     // alocate space for objects
     size_t objs_size = sizeof(enc_object_desc) * store.obj_cnt;
@@ -306,6 +316,7 @@ void enc_store_index_read(enc_store* store, const char* tag, char* key) {
         int file = open(filename, O_RDWR, 0644);
         if(file < 0) {
             perror("OPEN");
+            fprintf(stderr, "Rank: %d\n", ENC_RANK_G);
             fprintf(stderr, "Filename: %s\n", filename);
         }
         free(index_filename);
@@ -587,39 +598,34 @@ static void cache_grains(enc_store* store, size_t obj_idx, char* key) {
     // load the grains into the cache
     size_t blob_size = 0;
     if(ENC_RANK_G == 0) {
+        char* index_filename = malloc(10 + 3);
+        index_filename[0] = '\0';
+        sprintf(index_filename, "%lu-g", obj_idx);
 
-    char* index_filename = malloc(10 + 3);
-    index_filename[0] = '\0';
-    sprintf(index_filename, "%lu-g", obj_idx);
+        char * filename = append_path(store->name, index_filename);
+        int file = open(filename, O_RDWR, 0644);
+        free(index_filename);
+        free(filename);
 
-    char * filename = append_path(store->name, index_filename);
-    int file = open(filename, O_RDWR, 0644);
-    if(file < 0) {
-        perror("OPEN");
-        fprintf(stderr, "Filename: %s\n", filename);
-    }
-    free(index_filename);
-    free(filename);
+        if(file > 0) {
+            enc_load_config(store->cfg);
+            enc_set_key(key, enc_get_key_size());
 
-    if(file > 0) {
-        enc_load_config(store->cfg);
-        enc_set_key(key, enc_get_key_size());
+            blob_size = obj->grain_cnt * sizeof(enc_grain_meta);
+            size_t encrypted_size = enc_get_encrypted_size(store->cfg, blob_size);
 
-        blob_size = obj->grain_cnt * sizeof(enc_grain_meta);
-        size_t encrypted_size = enc_get_encrypted_size(store->cfg, blob_size);
+            void* src = mmap_unaligned(file, encrypted_size, 0);
 
-        void* src = mmap_unaligned(file, encrypted_size, 0);
+            size_t nonce_size = enc_get_nonce_size();
+            char* nonce = malloc(nonce_size);
+            memcpy(nonce, src, nonce_size);
+            enc_set_nonce(nonce, nonce_size);
 
-        size_t nonce_size = enc_get_nonce_size();
-        char* nonce = malloc(nonce_size);
-        memcpy(nonce, src, nonce_size);
-        enc_set_nonce(nonce, nonce_size);
+            enc_decrypt(src + nonce_size, blob_size, store->joined_obj_grains, blob_size);
 
-        enc_decrypt(src + nonce_size, blob_size, store->joined_obj_grains, blob_size);
-
-        free(nonce);
-        munmap_unaligned(src, encrypted_size, 0);
-    }
+            free(nonce);
+            munmap_unaligned(src, encrypted_size, 0);
+        }
     }
     if(blob_size > 0) MPI_Bcast(&store->joined_obj_grains, blob_size, MPI_BYTE, 0, MPI_COMM_WORLD);
 }
