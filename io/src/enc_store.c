@@ -395,7 +395,7 @@ static size_t write_to_grain(enc_store* store, int obj_idx, int grain_idx, enc_g
 
     enc_grain_data_write(*grain, data_store, data, key);
 
-    unmap_grain(store, obj_idx, grain_idx, data_store, file);
+    unmap_grain(store, obj_idx, grain_idx, grain, data_store, file);
     if(unaligned) free(data);
 
     return local_remaining_size;
@@ -432,7 +432,7 @@ static size_t read_from_grain(enc_store* store, int obj_idx, int grain_idx, enc_
         enc_grain_data_read(*grain, data_store, out_data, key);
     }
 
-    unmap_grain(store, obj_idx, grain_idx, data_store, file);
+    unmap_grain(store, obj_idx, grain_idx, grain, data_store, file);
     return local_remaining_size;
 }
 

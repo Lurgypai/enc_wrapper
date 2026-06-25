@@ -59,10 +59,9 @@ void map_grain(enc_store* store, int obj_idx, int grain_idx, enc_grain_meta* gra
 
 // TODO
 // needs to be fixed, passed grain meta
-void unmap_grain(enc_store* store, int obj_idx, int grain_idx, void* data, int file) {
+void unmap_grain(enc_store* store, int obj_idx, int grain_idx, enc_grain_meta* grain, void* data, int file) {
     enc_object_desc* obj = store->objs + obj_idx;
-    // enc_grain_meta* grain = obj->obj.grains + grain_idx;
-    // munmap(data, grain->size);
+    munmap(data, grain->size);
     close(file);
 }
 
