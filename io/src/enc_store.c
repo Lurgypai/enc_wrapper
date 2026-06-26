@@ -124,16 +124,6 @@ enc_store enc_store_open(const char* filename, char* key) {
     }
     // basic store metadata
     MPI_Bcast(&store, sizeof(store), MPI_BYTE, 0, MPI_COMM_WORLD);
-    size_t name_len = 0;
-    if(ENC_RANK_G == 0) {
-        name_len = strlen(store.name);
-    }
-    MPI_Bcast(&name_len, sizeof(name_len), MPI_BYTE, 0, MPI_COMM_WORLD);
-    if(ENC_RANK_G != 0) {
-        store.name = malloc(name_len + 1);
-        store.name[name_len] = '\0';
-    }
-    MPI_Bcast(store.name, name_len, MPI_BYTE, 0, MPI_COMM_WORLD);
 
     // alocate space for objects
     size_t objs_size = sizeof(enc_object_desc) * store.obj_cnt;
