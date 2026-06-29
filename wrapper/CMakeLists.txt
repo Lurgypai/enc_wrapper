@@ -35,7 +35,7 @@ else()
 endif()
 
 #ADD LIBRARY
-add_library(enc_wrapper STATIC ${ENC_WRAPPER_SRC})
+add_library(enc_wrapper SHARED ${ENC_WRAPPER_SRC})
 target_include_directories(enc_wrapper PUBLIC
     $<BUILD_INTERFACE:${ENC_WRAPPER_INCLUDE_DIRS}>
     $<INSTALL_INTERFACE:include>

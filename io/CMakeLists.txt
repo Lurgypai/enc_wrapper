@@ -8,7 +8,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(ENC_IO_SRC "./src/enc_grain.c" "./src/enc_object.c" "./src/enc_grain_index.c" "./src/enc_store.c" "./src/enc_util.c" "./src/enc_init.c")
 set(ENC_IO_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_library(enc_io STATIC ${ENC_IO_SRC})
+add_library(enc_io SHARED ${ENC_IO_SRC})
 target_sources(enc_io PRIVATE
     FILE_SET HEADERS FILES
     "${ENC_IO_INCLUDE}/enc_grain.h"
