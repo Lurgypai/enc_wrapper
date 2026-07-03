@@ -340,9 +340,10 @@ void enc_store_index_read(enc_store* store, const char* tag, char* key) {
     // set the count (and reserve) alloc, and load
     MPI_Bcast(&obj->obj.idx.cnt, sizeof(obj->obj.idx.cnt), MPI_BYTE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&obj->obj.idx.reserved, sizeof(obj->obj.idx.reserved), MPI_BYTE, 0, MPI_COMM_WORLD);
+    size_t index_reserved = sizeof(enc_grain_index_desc) * obj->obj.idx.reserved;
     size_t index_size = sizeof(enc_grain_index_desc) * obj->obj.idx.cnt;
-    if(ENC_RANK_G != 0) obj->obj.idx.grains = malloc(index_size);
-    MPI_Bcast(&obj->obj.idx.grains, sizeof(index_size), MPI_BYTE, 0, MPI_COMM_WORLD);
+    if(ENC_RANK_G != 0) obj->obj.idx.grains = malloc(index_reserved);
+    MPI_Bcast(obj->obj.idx.grains, index_size, MPI_BYTE, 0, MPI_COMM_WORLD);
 }
 
 
@@ -621,7 +622,8 @@ static void cache_grains(enc_store* store, size_t obj_idx, char* key) {
             munmap_unaligned(src, encrypted_size, 0);
         }
     }
-    if(blob_size > 0) MPI_Bcast(&store->joined_obj_grains, blob_size, MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&blob_size, sizeof(blob_size), MPI_BYTE, 0, MPI_COMM_WORLD);
+    if(blob_size > 0) MPI_Bcast(store->joined_obj_grains, blob_size, MPI_BYTE, 0, MPI_COMM_WORLD);
 }
 
 static void write_joined_obj_grain_meta(enc_store* store, char* key) {
