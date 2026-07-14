@@ -41,6 +41,7 @@ void enc_object_grain_write(enc_object obj, enc_grain_meta grain, void* data_mem
 void enc_object_opaque_meta_put(enc_object* obj, void* opaque, size_t opaque_size) {
     if(obj->opaque_meta != NULL) free(obj->opaque_meta);
 
+    obj->opaque_meta_size = opaque_size;
     obj->opaque_meta = malloc(opaque_size);
     memcpy(obj->opaque_meta, opaque, opaque_size);
 }
