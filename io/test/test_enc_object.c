@@ -139,6 +139,11 @@ int test_enc_object_put_meta() {
     return 0;
 }
 
+typedef struct dummy_meta_ {
+    int i;
+    char c;
+} dummy_meta;
+
 int test_enc_object_parse_meta() {
     const char* obj_tag = "test_object";
     enc_object obj = enc_object_make(obj_tag);
@@ -151,6 +156,8 @@ int test_enc_object_parse_meta() {
         .size = CHUNK_SIZE
     };
     size_t pos = enc_object_add_grain(&obj, grain);
+    dummy_meta o_meta = { 13, 'x' };
+    enc_object_opaque_meta_put(&obj, &o_meta, sizeof(o_meta));
 
     void* obj_meta = malloc(enc_object_get_meta_size(obj));
 
@@ -159,8 +166,10 @@ int test_enc_object_parse_meta() {
     enc_object obj2;
 
     enc_object_parse_meta(&obj2, obj_meta);
+    dummy_meta* o_meta2 = enc_object_opaque_meta_get(&obj2);
 
-    int ret = !(obj2.grain_cnt == obj.grain_cnt && obj2.tag_size == obj.tag_size && strcmp(obj2.tag, obj.tag) == 0);
+    int ret = !(obj2.grain_cnt == obj.grain_cnt && obj2.tag_size == obj.tag_size && strcmp(obj2.tag, obj.tag) == 0 &&
+            o_meta.c == o_meta2->c && o_meta.i == o_meta2->i);
 
     free(obj_meta);
     return 0;

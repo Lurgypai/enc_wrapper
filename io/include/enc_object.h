@@ -31,6 +31,9 @@ typedef struct enc_object_ {
     size_t cur_grain_offset;
 
     enc_grain_index idx;
+
+    void * opaque_meta;
+    size_t opaque_meta_size;
 } enc_object;
 
 enc_object enc_object_make(const char* tag);
@@ -40,6 +43,10 @@ size_t enc_object_add_grain(enc_object* obj, enc_grain_meta grain);
 
 void enc_object_grain_read(enc_object obj, enc_grain_meta grain, void* data_mem, void* data_store, char* key);
 void enc_object_grain_write(enc_object obj, enc_grain_meta grain, void* data_mem, void* data_store, char* key);
+
+// copies, frees existing
+void enc_object_opaque_meta_put(enc_object* obj, void* opaque, size_t opaque_size);
+void* enc_object_opaque_meta_get(enc_object* obj);
 
 size_t enc_object_get_meta_size(enc_object obj);
 // puts the object metadata as a contiguous buffer into meta_store, for encryption and writing

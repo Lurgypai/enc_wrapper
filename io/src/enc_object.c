@@ -9,12 +9,15 @@ enc_object enc_object_make(const char* tag) {
     obj.grain_cnt = 0;
     obj.cur_grain_offset = 0;
     obj.idx = enc_grain_index_make();
+    obj.opaque_meta = NULL;
+    obj.opaque_meta_size = 0;
     return obj;
 }
 
 void enc_object_free(enc_object* obj) {
     enc_grain_index_free(&obj->idx);
     free(obj->tag);
+    if(obj->opaque_meta != NULL) free(obj->opaque_meta);
 }
 
 size_t enc_object_add_grain(enc_object* obj, enc_grain_meta grain) {
@@ -35,8 +38,24 @@ void enc_object_grain_write(enc_object obj, enc_grain_meta grain, void* data_mem
     enc_grain_data_write(grain, data_store, data_mem, key);
 }
 
+void enc_object_opaque_meta_put(enc_object* obj, void* opaque, size_t opaque_size) {
+    if(obj->opaque_meta != NULL) free(obj->opaque_meta);
+
+    obj->opaque_meta = malloc(opaque_size);
+    memcpy(obj->opaque_meta, opaque, opaque_size);
+}
+
+void* enc_object_opaque_meta_get(enc_object* obj) {
+    return obj->opaque_meta;
+}
+
 size_t enc_object_get_meta_size(enc_object obj) {
-    return sizeof(obj.grain_cnt) + sizeof(obj.cur_grain_offset) + sizeof(obj.tag_size) + obj.tag_size;
+    return sizeof(obj.grain_cnt) +
+        sizeof(obj.cur_grain_offset) +
+        sizeof(obj.tag_size) +
+        obj.tag_size + 
+        sizeof(obj.opaque_meta_size) + 
+        obj.opaque_meta_size;
 }
 
 void enc_object_put_meta(enc_object obj, void* meta_store) {
@@ -48,6 +67,10 @@ void enc_object_put_meta(enc_object obj, void* meta_store) {
     memcpy(meta_store + offset, &obj.tag_size, sizeof(obj.tag_size));
     offset += sizeof(obj.tag_size);
     memcpy(meta_store + offset, obj.tag, obj.tag_size);
+    offset += obj.tag_size;
+    memcpy(meta_store + offset, &obj.opaque_meta_size, sizeof(obj.opaque_meta_size));
+    offset += sizeof(obj.opaque_meta_size);
+    memcpy(meta_store + offset, obj.opaque_meta, obj.opaque_meta_size);
     // add to offset if you add mroe things under here
 }
 
@@ -63,5 +86,12 @@ void enc_object_parse_meta(enc_object* obj, void* meta_store) {
     obj->tag = malloc(obj->tag_size + 1);
     obj->tag[obj->tag_size] = '\0';
     memcpy(obj->tag, meta_store + offset, obj->tag_size);
+    offset += obj->tag_size;
+
+    memcpy(&obj->opaque_meta_size, meta_store + offset, sizeof(obj->opaque_meta_size));
+    offset += sizeof(obj->opaque_meta_size);
+
+    obj->opaque_meta = malloc(obj->opaque_meta_size);
+    memcpy(obj->opaque_meta, meta_store + offset, obj->opaque_meta_size);
     // add to offset if you add more under here
 }
