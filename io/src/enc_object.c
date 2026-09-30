@@ -30,6 +30,18 @@ size_t enc_object_add_grain(enc_object* obj, enc_grain_meta grain) {
     return pos;
 }
 
+void enc_object_set_grains(enc_object* obj, enc_grain_meta* grains, size_t count) {
+    obj->grain_cnt = 0;
+    obj->cur_grain_offset = 0;
+
+    for(int grain_idx = 0; grain_idx != count; ++grain_idx) {
+        enc_grain_index_add_grain(&obj->idx, obj->grain_cnt, obj->cur_grain_offset,
+                grains[grain_idx].size);
+        ++obj->grain_cnt;
+        obj->cur_grain_offset += grains[grain_idx].size;
+    }
+}
+
 void enc_object_grain_read(enc_object obj, enc_grain_meta grain, void* data_mem, void* data_store, char* key) {
     enc_grain_data_read(grain, data_store, data_mem, key);
 }

@@ -1,5 +1,6 @@
 #pragma once
-#include "enc_store.h"
+#include "enc_grain.h"
+#include "string.h"
 
 // cache in the enc store for the grain meta of an object being accessed 
 

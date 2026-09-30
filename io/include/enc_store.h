@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include "enc_object.h"
+#include "enc_grain_meta_cache.h"
 
 #define INVALID_OBJECT_ID SIZE_MAX
 #define GRAIN_META_BUFFER_SIZE 128
@@ -25,10 +26,7 @@ typedef struct enc_store_ {
     size_t obj_cnt;
     size_t obj_reserved;
     enc_object_desc* objs;
-
-    char* cur_joined_obj;
-    enc_grain_meta* joined_obj_grains;
-    size_t joined_obj_reserved;
+    enc_grain_meta_cache cache;
 } enc_store;
 
 enc_store enc_store_create(const char* filename, enc_config cfg);
@@ -37,11 +35,16 @@ void enc_store_close(enc_store* store, char* key);
 
 void enc_store_add_object(enc_store* store, const char* tag, enc_object_layout layout);
 enc_object* enc_store_get_object(enc_store store, const char* tag);
-void enc_store_add_grain(enc_store* store, const char* tag, enc_grain_meta grain, char* key);
+// void enc_store_add_grain(enc_store* store, const char* tag, enc_grain_meta grain, char* key);
+void enc_store_set_grains(enc_store* store, const char* tag, enc_grain_meta* grains, size_t count, char* key);
 void enc_store_index_write(enc_store* store, const char* tag, char* key);
 void enc_store_index_read(enc_store* store, const char* tag, char* key);
 
-void enc_store_write(enc_store* store, const char* tag, size_t offset, size_t size, const void* in_data, char* key);
-void enc_store_read(enc_store* store, const char* tag, size_t offset, size_t size, void* out_data, char* key);
+// void enc_store_write(enc_store* store, const char* tag, size_t offset, size_t size, const void* in_data, char* key);
+// void enc_store_read(enc_store* store, const char* tag, size_t offset, size_t size, void* out_data, char* key);
+
+// collective calls automatically distribute across participating ranks, add modes later, not relevant atm
+void enc_store_write_coll(enc_store* store, const char* tag, size_t offset, size_t size, const void* in_data, char* key);
+void enc_store_read_coll(enc_store* store, const char* tag, size_t offset, size_t size, void* out_data, char* key);
 
 

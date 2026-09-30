@@ -40,6 +40,7 @@ enc_object enc_object_make(const char* tag);
 void enc_object_free(enc_object* obj);
 
 size_t enc_object_add_grain(enc_object* obj, enc_grain_meta grain);
+void enc_object_set_grains(enc_object* obj, enc_grain_meta* grains, size_t count);
 
 void enc_object_grain_read(enc_object obj, enc_grain_meta grain, void* data_mem, void* data_store, char* key);
 void enc_object_grain_write(enc_object obj, enc_grain_meta grain, void* data_mem, void* data_store, char* key);
